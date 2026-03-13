@@ -5,7 +5,7 @@ This document defines the WebSocket message protocol for real-time gameplay comm
 
 ## Connection Lifecycle
 1. **Authentication**: Client authenticates via HTTP `POST /auth/login` to get JWT
-2. **Connection**: Client connects to `ws://{host}:1337/lobby/{id}/ws` with JWT in Authorization header
+2. **Connection**: Client connects to `ws://{host}:1337/lobby/{id}/ws?token={jwt_token}` with JWT in query parameter
 3. **Game Start**: After all players join, host calls `POST /lobby/{id}/start` to begin game
 4. **Gameplay**: Real-time messages flow via WebSocket
 5. **Disconnection**: Client reconnects using same JWT, receives full game state
