@@ -1,9 +1,9 @@
 [gd_scene format=3 uid="uid://6d5r085ck3v2"]
 
-[ext_resource type="Script" uid="uid://d1kwqvm7y4fpq" path="res://stages/title/MainMenu.cs" id="1_cqnua"]
+[ext_resource type="Script" uid="uid://d1kwqvm7y4fpq" path="res://Scripts/UI/Main.cs" id="1_p8rbg"]
 
 [node name="Title" type="Node3D" unique_id=759184147]
-script = ExtResource("1_cqnua")
+script = ExtResource("1_p8rbg")
 
 [node name="HTTPRequest" type="HTTPRequest" parent="." unique_id=1468304889]
 
@@ -56,13 +56,29 @@ anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
 offset_left = -146.0
-offset_top = 94.0
+offset_top = 138.0
 offset_right = 150.31818
-offset_bottom = 155.5
+offset_bottom = 199.5
 grow_horizontal = 2
 grow_vertical = 2
 theme_override_font_sizes/font_size = 24
 text = "Login"
+
+[node name="ErrorLabel" type="Label" parent="UI" unique_id=1352762861]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -116.0
+offset_top = 87.0
+offset_right = 118.0
+offset_bottom = 110.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_colors/font_color = Color(1, 0.26, 0.26, 1)
+text = "Invalid username or password"
 
 [connection signal="request_completed" from="HTTPRequest" to="." method="OnHttpRequestRequestCompleted"]
 [connection signal="text_changed" from="UI/UsernameInput" to="." method="OnUsernameInputTextChanged"]
