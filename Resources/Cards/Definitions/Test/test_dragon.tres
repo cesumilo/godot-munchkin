@@ -1,0 +1,12 @@
+[gd_resource type="Resource" format=3]
+
+[ext_resource type="Script" path="res://Scripts/Cards/MonsterCardData.cs" id="1_qwr3u"]
+
+[resource]
+script = ExtResource("1_qwr3u")
+Level = 10
+FleePenalty = 2
+Treasures = 5
+Id = "1fafce1e-c3f7-4cb2-8e69-04785f92b91d"
+CardName = "Test Dragon"
+CardDescription = "A dragon created for testing"

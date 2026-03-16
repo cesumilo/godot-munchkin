@@ -1,0 +1,13 @@
+[gd_resource type="Resource" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://Scripts/Cards/RaceCardData.cs" id="1_9e3d5"]
+
+[resource]
+script = ExtResource("1_9e3d5")
+Id = "race_dwarf_001"
+Name = "Dwarf"
+Description = "Can carry any number of Big items."
+DType = 0
+Type = 3
+Race = 3
+Abilities = PackedStringArray("Can carry any number of Big items")

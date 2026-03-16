@@ -1,0 +1,13 @@
+[gd_resource type="Resource" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://Scripts/Cards/ActionCardData.cs" id="1_4c7d9"]
+
+[resource]
+script = ExtResource("1_4c7d9")
+Id = "action_potion_studliness_001"
+Name = "Potion of General Studliness"
+Description = "Use at any time. +2 to your side in combat."
+DType = 1
+Type = 5
+PlayableWhen = 2
+Effect = "+2 to your side in combat"

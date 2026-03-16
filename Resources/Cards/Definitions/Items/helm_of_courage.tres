@@ -1,0 +1,19 @@
+[gd_resource type="Resource" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://Scripts/Cards/ItemCardData.cs" id="1_8d9c2"]
+
+[resource]
+script = ExtResource("1_8d9c2")
+Id = "item_helm_of_courage_001"
+Name = "Helm of Courage"
+Description = "Protects your head and gives you +1 Bonus."
+DType = 1
+Type = 1
+Bonus = 1
+GoldValue = 200
+Size = 0
+Slot = 0
+HandsRequired = 0
+RaceRestriction = 0
+ClassRestriction = 0
+SexRestriction = 0

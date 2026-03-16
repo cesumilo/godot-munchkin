@@ -22,8 +22,8 @@ public partial class CardVisual : Node3D
     public override void _Ready()
     {
         // Try to find child nodes
-        _nameLabel = GetNodeOrNull<Label3D>("NameLabel");
-        _descriptionLabel = GetNodeOrNull<Label3D>("DescriptionLabel");
+        _nameLabel = GetNodeOrNull<Label3D>("CardMesh/NameLabel");
+        _descriptionLabel = GetNodeOrNull<Label3D>("CardMesh/DescriptionLabel");
         _cardMesh = GetNodeOrNull<MeshInstance3D>("CardMesh");
 
         if (_cardData != null)

@@ -1,0 +1,13 @@
+[gd_resource type="Resource" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://Scripts/Cards/ClassCardData.cs" id="1_6c9e7"]
+
+[resource]
+script = ExtResource("1_6c9e7")
+Id = "class_thief_001"
+Name = "Thief"
+Description = "Can attempt to steal one item per turn (roll d6, ≥4 succeeds)."
+DType = 0
+Type = 4
+Class = 2
+Abilities = PackedStringArray("Attempt to steal one item per turn (roll d6, ≥4 succeeds)")

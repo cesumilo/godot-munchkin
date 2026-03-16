@@ -1,0 +1,12 @@
+[gd_resource type="Resource" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://Scripts/Cards/CurseCardData.cs" id="1_3b8d1"]
+
+[resource]
+script = ExtResource("1_3b8d1")
+Id = "curse_lose_headgear_001"
+Name = "Lose Your Headgear"
+Description = "Immediately lose the Headgear you are wearing."
+DType = 0
+Type = 2
+Effect = 0

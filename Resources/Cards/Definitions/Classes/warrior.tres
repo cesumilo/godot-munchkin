@@ -1,0 +1,13 @@
+[gd_resource type="Resource" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://Scripts/Cards/ClassCardData.cs" id="1_2a8f3"]
+
+[resource]
+script = ExtResource("1_2a8f3")
+Id = "class_warrior_001"
+Name = "Warrior"
+Description = "Can discard up to 3 cards for +1 each during combat."
+DType = 0
+Type = 4
+Class = 1
+Abilities = PackedStringArray("Discard up to 3 cards for +1 each during combat")

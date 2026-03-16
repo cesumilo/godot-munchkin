@@ -1,0 +1,15 @@
+[gd_resource type="Resource" format=3 uid="uid://co6o00q631w1a"]
+
+[ext_resource type="Script" uid="uid://cibf684nfkula" path="res://Scripts/Cards/ItemCardData.cs" id="1_15f35"]
+
+[resource]
+script = ExtResource("1_15f35")
+Bonus = 3
+GoldValue = 400
+Slot = 3
+HandsRequired = 0
+Id = "item_broad_sword_001"
+Name = "Broad Sword"
+Description = "A simple sword!"
+DType = 1
+Type = 1

@@ -1,0 +1,6 @@
+[gd_scene format=3 uid="uid://7beom5yy6fgs"]
+
+[ext_resource type="Script" uid="uid://dtob4ja5gyo61" path="res://Scripts/Cards/CardSystemTest.cs" id="1_nxnbf"]
+
+[node name="CardSystemTest" type="Node3D" unique_id=684574343]
+script = ExtResource("1_nxnbf")

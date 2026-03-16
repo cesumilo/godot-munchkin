@@ -1,0 +1,9 @@
+[gd_resource type="Resource" format=3 uid="uid://fulv01acbdoj"]
+
+[ext_resource type="Script" uid="uid://bc24p4k580uwa" path="res://Scripts/Cards/MonsterCardData.cs" id="1_7e9ac"]
+
+[resource]
+script = ExtResource("1_7e9ac")
+Id = "monster_potted_plant_001"
+Name = "Potted Plant"
+Description = "It's a monster. Really. With a pot."

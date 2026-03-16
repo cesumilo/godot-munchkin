@@ -1,0 +1,13 @@
+[gd_resource type="Resource" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://Scripts/Cards/ActionCardData.cs" id="1_5b9a2"]
+
+[resource]
+script = ExtResource("1_5b9a2")
+Id = "action_duck_of_doom_001"
+Name = "Duck of Doom"
+Description = "+5 to either side in combat."
+DType = 1
+Type = 5
+PlayableWhen = 1
+Effect = "+5 to either side in combat"
