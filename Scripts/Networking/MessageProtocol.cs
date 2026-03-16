@@ -550,4 +550,131 @@ public static class MessageProtocol
             || messageType == PLAYER_UPDATE
             || messageType == ERROR;
     }
+
+    // ============== CARD DATA STRUCTURES ==============
+
+    /// <summary>
+    /// Card data for network transmission
+    /// Based on PROTOCOL.md §Data Types Reference
+    /// </summary>
+    public class NetworkCardData
+    {
+        public string Id { get; set; }
+        public string Name { get; set; }
+        public string Description { get; set; }
+        public string DeckType { get; set; } // "DUNGEON" or "TREASURE"
+        public string Type { get; set; } // "MONSTER", "ITEM", etc.
+
+        // Monster-specific
+        public int? Level { get; set; }
+        public int? Treasures { get; set; }
+        public int? LevelsGained { get; set; }
+
+        // Item-specific
+        public int? Bonus { get; set; }
+        public int? GoldValue { get; set; }
+        public string? Slot { get; set; }
+
+        // Common properties as dictionaries for flexibility
+        public Godot.Collections.Dictionary AdditionalProperties { get; set; } = new();
+    }
+
+    /// <summary>
+    /// Convert CardData to network format
+    /// </summary>
+    public static NetworkCardData ToNetworkFormat(CardData cardData)
+    {
+        var networkCard = new NetworkCardData
+        {
+            Id = cardData.Id,
+            Name = cardData.Name,
+            Description = cardData.Description,
+            DeckType = cardData.DType.ToString().ToUpper(),
+            Type = cardData.Type.ToString().ToUpper(),
+        };
+
+        // Handle specific card types
+        switch (cardData)
+        {
+            case MonsterCardData monster:
+                networkCard.Level = monster.Level;
+                networkCard.Treasures = monster.Treasures;
+                networkCard.LevelsGained = monster.LevelsGained;
+                networkCard.AdditionalProperties["flee_penalty"] = monster.FleePenalty.ToString();
+                networkCard.AdditionalProperties["flee_modifier"] = monster.FleeModifier;
+                if (monster.BonusAgainstRace != RaceType.None)
+                    networkCard.AdditionalProperties["bonus_against_race"] = monster
+                        .BonusAgainstRace.ToString()
+                        .ToUpper();
+                if (monster.BonusAgainstClass != ClassType.None)
+                    networkCard.AdditionalProperties["bonus_against_class"] = monster
+                        .BonusAgainstClass.ToString()
+                        .ToUpper();
+                if (monster.BonusValue != 0)
+                    networkCard.AdditionalProperties["bonus_value"] = monster.BonusValue;
+                break;
+
+            case ItemCardData item:
+                networkCard.Bonus = item.Bonus;
+                networkCard.GoldValue = item.GoldValue;
+                networkCard.Slot = item.Slot.ToString().ToUpper();
+                networkCard.AdditionalProperties["size"] = item.Size.ToString().ToUpper();
+                networkCard.AdditionalProperties["hands_required"] = item.HandsRequired;
+                if (item.RaceRestriction != RaceType.None)
+                    networkCard.AdditionalProperties["race_restriction"] = item
+                        .RaceRestriction.ToString()
+                        .ToUpper();
+                if (item.ClassRestriction != ClassType.None)
+                    networkCard.AdditionalProperties["class_restriction"] = item
+                        .ClassRestriction.ToString()
+                        .ToUpper();
+                if (item.SexRestriction != SexType.None)
+                    networkCard.AdditionalProperties["sex_restriction"] = item
+                        .SexRestriction.ToString()
+                        .ToUpper();
+                break;
+
+            case RaceCardData race:
+                networkCard.AdditionalProperties["race"] = race.Race.ToString().ToUpper();
+                if (race.Abilities != null && race.Abilities.Length > 0)
+                    networkCard.AdditionalProperties["abilities"] = race.Abilities;
+                break;
+
+            case ClassCardData @class:
+                networkCard.AdditionalProperties["class"] = @class.Class.ToString().ToUpper();
+                if (@class.Abilities != null && @class.Abilities.Length > 0)
+                    networkCard.AdditionalProperties["abilities"] = @class.Abilities;
+                break;
+
+            case ActionCardData action:
+                networkCard.AdditionalProperties["playable_when"] = action
+                    .PlayableWhen.ToString()
+                    .ToUpper();
+                networkCard.AdditionalProperties["effect"] = action.Effect;
+                break;
+
+            case CurseCardData curse:
+                networkCard.AdditionalProperties["effect"] = curse.Effect.ToString().ToUpper();
+                break;
+        }
+
+        return networkCard;
+    }
+
+    /// <summary>
+    /// Parse card data from network message
+    /// This is a simplified version - in practice, server sends card IDs and client loads from local DB
+    /// </summary>
+    public static CardData ParseCardFromNetwork(Godot.Collections.Dictionary networkData)
+    {
+        if (!networkData.ContainsKey("id"))
+            return null;
+
+        string cardId = (string)networkData["id"];
+
+        // In the actual implementation, we would look up the card in CardFactory
+        // For now, return null - client should have card data loaded locally
+        GD.Print($"[MessageProtocol] Received card reference: {cardId}");
+        return null;
+    }
 }
