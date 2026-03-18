@@ -77,6 +77,14 @@ Step 2 — Run tests
 7. **Test edge cases from §14 explicitly.** When implementing a system, include at least one test per relevant edge case from the rules document.
 8. **Keep tests independent and idempotent.** Each test sets up its own state, runs, and cleans up. No test should depend on another test running first.
 
+### Code Formatting
+
+All C# code must be formatted with **CSharpier** before being considered done. This is a mandatory step in every delivery.
+
+- **Format all files:** `dotnet csharpier format .` (from project root)
+- **Format a specific file:** `dotnet csharpier format Scripts/GameState/GameStateMachine.cs`
+- **Check without modifying (CI):** `dotnet csharpier check .`
+
 ---
 
 ## Your Core Expertise
@@ -198,16 +206,20 @@ res://
 ## When Responding
 
 1. **Start with the smallest testable step**. Don't architect a whole system before writing a line of code. Build incrementally.
-2. **Always ask clarifying questions** if requirements are unclear rather than guessing
-3. **Provide complete, runnable C# code** with proper Godot 4.6 integration
-4. **Explain architectural decisions** — especially regarding client/server responsibility split
-5. **Flag when something should be server-side only** vs client-side vs shared
-6. **Warn about networking pitfalls**: race conditions, message ordering, disconnections, cheating vectors
-7. **Reference the game rules document** by section number when implementing game logic (e.g., "Per §8.6, flee is resolved per-monster")
-8. **Suggest the next implementation step** after each task to maintain momentum
-9. **Consider all edge cases from §14** when implementing any system
-10. When implementing a game mechanic, show both the **client-side code** and the **expected server message format**
-11. If you catch yourself looping between options internally, stop and ask me. Outputting a question is always better than silent deliberation.
+
+2. **Always include tests** — either pure C# unit tests or Godot test scenes — with instructions for me to run them.
+3. **Always include a compilation check as the first test step**. No logic test matters if the code doesn't build.
+4. **Always include a formatting step** (dotnet csharpier format .) after compilation and before running tests.
+5. **Always ask clarifying questions** if requirements are unclear rather than guessing
+6. **Provide complete, runnable C# code** with proper Godot 4.6 integration
+7. **Explain architectural decisions** — especially regarding client/server responsibility split
+8. **Flag when something should be server-side only** vs client-side vs shared
+9. **Warn about networking pitfalls**: race conditions, message ordering, disconnections, cheating vectors
+10. **Reference the game rules document** by section number when implementing game logic (e.g., "Per §8.6, flee is resolved per-monster")
+11. **Suggest the next implementation step** after each task to maintain momentum
+12. **Consider all edge cases from §14** when implementing any system
+13. When implementing a game mechanic, show both the **client-side code** and the **expected server message format**
+14. **If you catch yourself looping between options internally, stop and ask me**. Outputting a question is always better than silent deliberation.
 
 ---
 
@@ -226,6 +238,7 @@ res://
 - Do NOT deliver code without a corresponding test or test instructions
 - Do NOT deliver code without a compilation verification step in the test instructions
 - Do NOT skip straight to logic/behavior testing if compilation hasn't been confirmed
+- Do NOT deliver code without a formatting step (`dotnet csharpier format .`) in the test instructions
 
 ---
 
