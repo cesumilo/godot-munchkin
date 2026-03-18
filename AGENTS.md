@@ -31,12 +31,51 @@ You have a tendency to loop between hypotheses internally. Follow these rules st
 ### Decision Format
 
 When facing a non-trivial design choice, use this format:
+
+```
 Decision needed: [one sentence]
 My pick: [choice] because [one reason]
 Risk: [what could go wrong]
 Test: [how to verify quickly — code snippet, scenario, or question to you]
+```
 
 If you cannot fill in "Test", the decision is too abstract — make it more concrete.
+
+### Testing Strategy
+
+You cannot run Godot or the game yourself. Therefore:
+
+1. **Write the tests yourself.** Every non-trivial system you produce must come with a corresponding test. Don't just write production code and hope it works.
+2. **Always verify compilation first.** Every code delivery must include a compilation check step. Before I run any logic or gameplay test, I must confirm the code compiles. Your instructions must always start with:
+   - For Godot C#: `"Build the project via Godot (Build menu → Build Solution) or run dotnet build from the project root. Report any compiler errors before proceeding."`
+   - For standalone test projects: `"Run dotnet build in the Tests/ folder. Report any compiler errors before proceeding."`
+   - **Do not skip this step.** If the code doesn't compile, nothing else matters. I will report errors back to you and you will fix them before moving on to logic tests.
+3. **Provide step-by-step instructions** so I can run the test and report results back to you. Assume I know how to operate Godot and a terminal, but spell out exactly what to do.
+4. **Prefer pure C# unit tests for logic code.** Any class that doesn't depend on Godot nodes (combat calculation, equipment validation, sale logic, state machines, message parsing) should be testable via a standalone C# test project or a minimal Godot scene with a test runner script. Write these as `static` methods or classes so they can be tested outside the scene tree when possible.
+5. **For code that requires Godot runtime** (scenes, UI, networking), write a small **test scene** (`TestXxx.tscn` + `TestXxx.cs`) that:
+   - Sets up the minimal required state
+   - Runs the action being tested
+   - Prints `PASS` or `FAIL: [reason]` to the Godot output console (`GD.Print`)
+   - Requires no manual interaction unless explicitly stated (e.g., "click the card to test drag-and-drop")
+6. **Always specify which test to run and what output to expect.** Use this format:
+
+```
+How to test
+Step 1 — Compilation
+
+[Build command — e.g., "In Godot: Build → Build Solution" or "dotnet build in project root"]
+[Expected: "Build succeeded, 0 errors." Report any errors before continuing.]
+
+Step 2 — Run tests
+
+[Where to put the file(s)]
+[How to run — e.g., "Run the TestCombat.tscn scene" or "dotnet test from the Tests/ folder"]
+[Expected output — exact console lines or behavior to look for]
+[What to report back — e.g., "Tell me all FAIL lines, or confirm all PASS"]
+```
+
+7. **Test edge cases from §14 explicitly.** When implementing a system, include at least one test per relevant edge case from the rules document.
+8. **Keep tests independent and idempotent.** Each test sets up its own state, runs, and cleans up. No test should depend on another test running first.
 
 ---
 
@@ -184,6 +223,9 @@ res://
 - Do NOT answer in french, only english
 - Do NOT silently loop between multiple hypotheses — pick one, test it, iterate
 - Do NOT try to produce a perfect solution on the first pass — fail fast and fix
+- Do NOT deliver code without a corresponding test or test instructions
+- Do NOT deliver code without a compilation verification step in the test instructions
+- Do NOT skip straight to logic/behavior testing if compilation hasn't been confirmed
 
 ---
 
