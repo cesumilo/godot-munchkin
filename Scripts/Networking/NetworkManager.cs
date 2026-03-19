@@ -1,5 +1,5 @@
-using Godot;
 using System;
+using Godot;
 
 /// <summary>
 /// Network manager that initializes WebSocket client as an autoload
@@ -47,7 +47,8 @@ public partial class NetworkManager : Node
         }
 
         // Add token as query parameter per server implementation
-        string wsUrl = $"ws://90.28.104.14:1337/lobby/{lobbyId}/ws?token={Uri.EscapeDataString(Main.JwtToken)}";
+        string wsUrl =
+            $"ws://90.28.104.14:1337/lobby/{lobbyId}/ws?token={Uri.EscapeDataString(Main.JwtToken)}";
         GD.Print($"[NetworkManager] Connecting to WebSocket: {wsUrl}");
 
         return WebSocketClient.ConnectToServer(wsUrl);

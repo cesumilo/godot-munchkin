@@ -19,6 +19,7 @@ config/icon="res://icon.svg"
 
 NetworkManager="*res://Scripts/Networking/NetworkManager.cs"
 CardFactory="*res://Scripts/Cards/CardFactory.cs"
+GameStateManager="*res://Scripts/GameState/GameStateManager.cs"
 
 [display]
 
