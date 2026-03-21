@@ -50,8 +50,18 @@ public partial class PlayerState
             // Server does authoritative calculation
             int total = Level;
 
-            // TODO: Add equipment bonuses from CardFactory
-            // This will be implemented when we integrate with CardData system
+            // Add equipment bonuses from CardFactory
+            if (CardFactory.Instance != null)
+            {
+                foreach (var equipmentId in WornEquipmentIds)
+                {
+                    var item = CardFactory.Instance.GetCardById<ItemCardData>(equipmentId);
+                    if (item != null)
+                    {
+                        total += item.Bonus;
+                    }
+                }
+            }
 
             return total;
         }
@@ -69,9 +79,97 @@ public partial class PlayerState
     // Helper methods
     public bool CanEquipItem(string itemCardId)
     {
-        // TODO: Implement equipment slot validation (rules §9.3)
-        // Check slots, restrictions, big item limits
-        return true; // Placeholder
+        var item = GetItemData(itemCardId);
+        if (item == null)
+            return false;
+
+        // Check race restriction
+        if (item.RaceRestriction != RaceType.None)
+        {
+            if (item.RaceRestriction != PrimaryRace && item.RaceRestriction != SecondaryRace)
+                return false;
+        }
+
+        // Check class restriction
+        if (item.ClassRestriction != ClassType.None)
+        {
+            if (item.ClassRestriction != PrimaryClass && item.ClassRestriction != SecondaryClass)
+                return false;
+        }
+
+        // Check sex restriction
+        if (item.SexRestriction != SexType.None && item.SexRestriction != Sex)
+            return false;
+
+        // Check slot availability
+        if (!IsSlotAvailable(item))
+            return false;
+
+        // Check big item limit (rules §9.2)
+        if (item.Size == ItemSize.Big && !CanCarryAnotherBigItem())
+            return false;
+
+        return true;
+    }
+
+    private bool IsSlotAvailable(ItemCardData item)
+    {
+        if (item.Slot == EquipmentSlot.None)
+            return true;
+
+        // Check if slot is already occupied
+        foreach (var wornId in WornEquipmentIds)
+        {
+            var wornItem = GetItemData(wornId);
+            if (wornItem != null)
+            {
+                // Two-handed items occupy both hand slots
+                if (item.Slot == EquipmentSlot.TwoHands)
+                {
+                    if (
+                        wornItem.Slot == EquipmentSlot.Hand1
+                        || wornItem.Slot == EquipmentSlot.Hand2
+                        || wornItem.Slot == EquipmentSlot.TwoHands
+                    )
+                        return false;
+                }
+                // One-handed items conflict with two-handed items
+                else if (item.Slot == EquipmentSlot.Hand1 || item.Slot == EquipmentSlot.Hand2)
+                {
+                    if (wornItem.Slot == EquipmentSlot.TwoHands)
+                        return false;
+
+                    // Check for same slot
+                    if (wornItem.Slot == item.Slot)
+                        return false;
+                }
+                else if (wornItem.Slot == item.Slot)
+                {
+                    // Same slot (head, armor, feet) - only one allowed
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    }
+
+    private bool CanCarryAnotherBigItem()
+    {
+        // Dwarf can carry multiple big items (rules §9.2)
+        if (PrimaryRace == RaceType.Dwarf || SecondaryRace == RaceType.Dwarf)
+            return true;
+
+        // Count big items currently worn
+        int bigItemCount = 0;
+        foreach (var wornId in WornEquipmentIds)
+        {
+            var wornItem = GetItemData(wornId);
+            if (wornItem != null && wornItem.Size == ItemSize.Big)
+                bigItemCount++;
+        }
+
+        return bigItemCount < 1; // Only one big item allowed for non-dwarves
     }
 
     public bool HasItemInPlay(string cardId)
@@ -122,6 +220,84 @@ public partial class PlayerState
             return true;
         }
         return false;
+    }
+
+    // CardData helper methods
+    public ItemCardData GetItemData(string cardId)
+    {
+        if (CardFactory.Instance == null)
+            return null;
+
+        return CardFactory.Instance.GetCardById<ItemCardData>(cardId);
+    }
+
+    public CardData GetCardData(string cardId)
+    {
+        if (CardFactory.Instance == null)
+            return null;
+
+        return CardFactory.Instance.GetCardById(cardId);
+    }
+
+    public T GetCardData<T>(string cardId)
+        where T : CardData
+    {
+        if (CardFactory.Instance == null)
+            return null;
+
+        return CardFactory.Instance.GetCardById<T>(cardId);
+    }
+
+    // Equipment management helpers
+    public int GetEquipmentBonus()
+    {
+        int bonus = 0;
+        if (CardFactory.Instance != null)
+        {
+            foreach (var equipmentId in WornEquipmentIds)
+            {
+                var item = GetItemData(equipmentId);
+                if (item != null)
+                {
+                    bonus += item.Bonus;
+                }
+            }
+        }
+        return bonus;
+    }
+
+    public List<ItemCardData> GetWornEquipment()
+    {
+        var result = new List<ItemCardData>();
+        if (CardFactory.Instance != null)
+        {
+            foreach (var equipmentId in WornEquipmentIds)
+            {
+                var item = GetItemData(equipmentId);
+                if (item != null)
+                {
+                    result.Add(item);
+                }
+            }
+        }
+        return result;
+    }
+
+    public List<ItemCardData> GetCarriedEquipment()
+    {
+        var result = new List<ItemCardData>();
+        if (CardFactory.Instance != null)
+        {
+            foreach (var equipmentId in CarriedEquipmentIds)
+            {
+                var item = GetItemData(equipmentId);
+                if (item != null)
+                {
+                    result.Add(item);
+                }
+            }
+        }
+        return result;
     }
 
     // Clone for network transmission (deep copy)
