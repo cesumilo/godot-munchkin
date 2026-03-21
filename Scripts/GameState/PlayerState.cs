@@ -200,12 +200,24 @@ public partial class PlayerState
 
     public bool EquipItem(string cardId)
     {
-        if (!WornEquipmentIds.Contains(cardId))
-        {
-            WornEquipmentIds.Add(cardId);
-            return true;
-        }
-        return false;
+        // Check if already equipped
+        if (WornEquipmentIds.Contains(cardId))
+            return false;
+
+        // Check if can be equipped
+        if (!CanEquipItem(cardId))
+            return false;
+
+        // Item must be in hand or carried to equip it
+        bool wasInHand = HandCardIds.Remove(cardId);
+        bool wasCarried = CarriedEquipmentIds.Remove(cardId);
+
+        if (!wasInHand && !wasCarried)
+            return false; // Item not available to equip
+
+        // Equip the item
+        WornEquipmentIds.Add(cardId);
+        return true;
     }
 
     public bool UnequipItem(string cardId)

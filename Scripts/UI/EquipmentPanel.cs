@@ -202,7 +202,7 @@ public partial class EquipmentPanel : Node3D
                 position = Vector3.Zero;
             }
 
-            CreateCardVisual(item, position, true); // Carried items are face-up (visible)
+            CreateCardVisual(item, position, true, false); // Carried items are face-up but not worn
         }
     }
 
@@ -232,7 +232,13 @@ public partial class EquipmentPanel : Node3D
     /// <param name="itemData">The item card data</param>
     /// <param name="position">3D position to place the card</param>
     /// <param name="faceUp">True = face-up (visible to all players), False = face-down (only for cards in hand)</param>
-    private void CreateCardVisual(ItemCardData itemData, Vector3 position, bool faceUp = true)
+    /// <param name="isWorn">True = equipped and giving bonus, False = carried (no bonus)</param>
+    private void CreateCardVisual(
+        ItemCardData itemData,
+        Vector3 position,
+        bool faceUp = true,
+        bool isWorn = true
+    )
     {
         Node3D cardVisualInstance;
 
@@ -250,14 +256,14 @@ public partial class EquipmentPanel : Node3D
             else
             {
                 // Fallback: create simple visual
-                CreateSimpleCardVisual(cardVisualInstance, itemData);
+                CreateSimpleCardVisual(cardVisualInstance, itemData, isWorn);
             }
         }
         else
         {
             // Create simple visual directly
             cardVisualInstance = new Node3D();
-            CreateSimpleCardVisual(cardVisualInstance, itemData);
+            CreateSimpleCardVisual(cardVisualInstance, itemData, isWorn);
         }
 
         AddChild(cardVisualInstance);
@@ -276,29 +282,45 @@ public partial class EquipmentPanel : Node3D
         GD.Print($"[EquipmentPanel] Created card visual for: {itemData.Name} at {position}");
     }
 
-    private void CreateSimpleCardVisual(Node3D parent, ItemCardData itemData)
+    private void CreateSimpleCardVisual(Node3D parent, ItemCardData itemData, bool isWorn = true)
     {
         // Create a simple mesh for the card
         var meshInstance = new MeshInstance3D();
         var boxMesh = new BoxMesh { Size = new Vector3(0.7f, 1f, 0.01f) };
         meshInstance.Mesh = boxMesh;
 
-        // Color code by item type/bonus
+        // Color code by item type/bonus and worn status
         var material = new StandardMaterial3D();
-        material.AlbedoColor = itemData.Bonus switch
+        Color baseColor = itemData.Bonus switch
         {
             >= 5 => new Color(1f, 0.5f, 0f), // Orange for high bonus
             >= 3 => new Color(0f, 1f, 0f), // Green for medium bonus
             _ => new Color(0.5f, 0.5f, 1f), // Blue for low bonus
         };
+
+        // Adjust color based on worn status
+        if (isWorn)
+        {
+            // Worn equipment: brighter, active look
+            material.AlbedoColor = baseColor;
+            material.Emission = baseColor * 0.3f; // Subtle glow
+            material.EmissionEnabled = true;
+        }
+        else
+        {
+            // Carried equipment: duller, inactive look
+            material.AlbedoColor = baseColor * 0.6f; // 60% brightness
+            material.EmissionEnabled = false;
+        }
+
         meshInstance.MaterialOverride = material;
 
         parent.AddChild(meshInstance);
 
-        // Add label with item name and bonus
+        // Add label with item name, bonus, and status
         var label = new Label3D
         {
-            Text = $"{itemData.Name}\n+{itemData.Bonus}",
+            Text = $"{itemData.Name}\n+{itemData.Bonus}\n{(isWorn ? "EQUIPPED" : "CARRIED")}",
             FontSize = 16,
             Position = new Vector3(0, 0.3f, 0.006f),
             Billboard = BaseMaterial3D.BillboardModeEnum.Enabled,

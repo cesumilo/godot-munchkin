@@ -39,6 +39,19 @@ public partial class EquipmentTest : Node3D
         GD.Print("=== EquipmentPanel Test Complete ===");
     }
 
+    private string GetHelmSlotInfo()
+    {
+        var cardFactory = GetNode<CardFactory>("/root/CardFactory");
+        if (cardFactory == null)
+            return "CardFactory not found";
+
+        var helmData = cardFactory.GetCardById("item_helm_of_courage_001") as ItemCardData;
+        if (helmData == null)
+            return "Helm data not found";
+
+        return $"Slot={helmData.Slot}, Bonus={helmData.Bonus}";
+    }
+
     private PlayerState CreateTestPlayer()
     {
         var player = new PlayerState
@@ -57,12 +70,37 @@ public partial class EquipmentTest : Node3D
         player.AddToHand("item_broad_sword_001");
         player.AddToHand("item_helm_of_courage_001");
 
-        // Equip the sword
+        // Try to equip both items
         if (player.CanEquipItem("item_broad_sword_001"))
         {
-            player.EquipItem("item_broad_sword_001");
-            GD.Print("Test player equipped Broad Sword");
+            bool equippedSword = player.EquipItem("item_broad_sword_001");
+            GD.Print($"Test player equipped Broad Sword: {equippedSword}");
         }
+        else
+        {
+            GD.PrintErr("FAIL: Cannot equip Broad Sword");
+        }
+
+        if (player.CanEquipItem("item_helm_of_courage_001"))
+        {
+            bool equippedHelm = player.EquipItem("item_helm_of_courage_001");
+            GD.Print($"Test player equipped Helm of Courage: {equippedHelm}");
+        }
+        else
+        {
+            GD.PrintErr($"FAIL: Cannot equip Helm of Courage. Check slot: {GetHelmSlotInfo()}");
+        }
+
+        // Debug: Check what's in each list
+        GD.Print($"\nDebug - Player equipment state:");
+        GD.Print($"  Hand: {player.HandCardIds.Count} items");
+        GD.Print($"  Worn: {player.WornEquipmentIds.Count} items");
+        GD.Print($"  Carried: {player.CarriedEquipmentIds.Count} items");
+
+        foreach (var id in player.WornEquipmentIds)
+            GD.Print($"    Worn: {id}");
+        foreach (var id in player.CarriedEquipmentIds)
+            GD.Print($"    Carried: {id}");
 
         return player;
     }
@@ -107,41 +145,69 @@ public partial class EquipmentTest : Node3D
     {
         GD.Print("\n--- Checking Equipment Display ---");
 
-        // Count worn equipment
+        // Count worn equipment - we equipped both sword and helm
         int wornCount = testPlayer.WornEquipmentIds.Count;
-        GD.Print($"Worn equipment count: {wornCount} (should be 1)");
+        GD.Print($"Worn equipment count: {wornCount} (should be 2: sword + helm)");
 
-        if (wornCount == 1)
+        if (wornCount == 2)
         {
-            GD.Print("PASS: EquipmentPanel should show 1 worn item");
+            GD.Print("PASS: EquipmentPanel should show 2 worn items");
         }
         else
         {
-            GD.PrintErr($"FAIL: Expected 1 worn item, got {wornCount}");
+            GD.PrintErr($"FAIL: Expected 2 worn items, got {wornCount}");
         }
 
-        // Check total bonus calculation
+        // Check total bonus calculation: Level 5 + Sword 3 + Helm 1 = 9
         int totalBonus = testPlayer.TotalCombatBonus;
-        GD.Print($"Total combat bonus: {totalBonus} (should be 8: Level 5 + Bonus 3)");
+        GD.Print($"Total combat bonus: {totalBonus} (should be 9: Level 5 + Sword 3 + Helm 1)");
 
-        if (totalBonus == 8)
+        if (totalBonus == 9)
         {
             GD.Print("PASS: Total bonus calculated correctly");
         }
         else
         {
-            GD.PrintErr($"FAIL: Expected total bonus 8, got {totalBonus}");
+            GD.PrintErr($"FAIL: Expected total bonus 9, got {totalBonus}");
         }
 
-        // Test equipment validation
+        // Test equipment validation - helm already equipped, so should return false
         bool canEquipHelm = testPlayer.CanEquipItem("item_helm_of_courage_001");
-        GD.Print($"Can equip Helm of Courage? {canEquipHelm}");
+        GD.Print($"Can equip Helm of Courage? {canEquipHelm} (should be false - already equipped)");
 
         // Update status label
         if (_statusLabel != null)
         {
-            _statusLabel.Text =
-                $"Equipment Test Complete\nWorn: {wornCount} items\nBonus: +{totalBonus - testPlayer.Level}";
+            _statusLabel.Text = $"Test Complete\nWorn: {wornCount}/2\nBonus: {totalBonus}/9";
+        }
+
+        // Additional test: Try to unequip and re-equip
+        TestUnequipAndReequip(testPlayer);
+    }
+
+    private void TestUnequipAndReequip(PlayerState testPlayer)
+    {
+        GD.Print("\n--- Testing Unequip/Re-equip ---");
+
+        // Try to unequip the helm
+        bool unequipped = testPlayer.UnequipItem("item_helm_of_courage_001");
+        GD.Print($"Unequipped helm: {unequipped}");
+
+        if (unequipped)
+        {
+            GD.Print(
+                $"After unequip - Worn: {testPlayer.WornEquipmentIds.Count}, Carried: {testPlayer.CarriedEquipmentIds.Count}"
+            );
+
+            // Now should be able to equip it again
+            bool canEquipNow = testPlayer.CanEquipItem("item_helm_of_courage_001");
+            GD.Print($"Can equip helm now? {canEquipNow} (should be true)");
+
+            if (canEquipNow)
+            {
+                bool reequipped = testPlayer.EquipItem("item_helm_of_courage_001");
+                GD.Print($"Re-equipped helm: {reequipped}");
+            }
         }
     }
 
