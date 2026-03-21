@@ -1,0 +1,125 @@
+[gd_scene format=3 uid="uid://byuwkicmjoqua"]
+
+[ext_resource type="Script" uid="uid://eqe8x57p2tv7" path="res://Scripts/UI/EquipmentPanel.cs" id="1_equip"]
+[ext_resource type="PackedScene" path="res://Scenes/UI/CardVisual.tscn" id="2_or8pq"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_slot_bg"]
+albedo_color = Color(0.2, 0.2, 0.3, 0.5)
+
+[node name="EquipmentPanel" type="Node3D" unique_id=1455354641 node_paths=PackedStringArray("_headSlotContainer", "_armorSlotContainer", "_feetSlotContainer", "_hand1SlotContainer", "_hand2SlotContainer", "_carriedEquipmentContainer", "_playerNameLabel", "_playerLevelLabel", "_totalBonusLabel", "_raceLabel", "_classLabel")]
+script = ExtResource("1_equip")
+_headSlotContainer = NodePath("EquipmentSlots/HeadSlot")
+_armorSlotContainer = NodePath("EquipmentSlots/ArmorSlot")
+_feetSlotContainer = NodePath("EquipmentSlots/FeetSlot")
+_hand1SlotContainer = NodePath("EquipmentSlots/Hand1Slot")
+_hand2SlotContainer = NodePath("EquipmentSlots/Hand2Slot")
+_carriedEquipmentContainer = NodePath("CarriedEquipment/CarriedContainer")
+_cardVisualScene = ExtResource("2_or8pq")
+_playerNameLabel = NodePath("PlayerInfo/PlayerName")
+_playerLevelLabel = NodePath("PlayerInfo/PlayerLevel")
+_totalBonusLabel = NodePath("PlayerInfo/TotalBonus")
+_raceLabel = NodePath("PlayerInfo/RaceInfo")
+_classLabel = NodePath("PlayerInfo/ClassInfo")
+
+[node name="PlayerInfo" type="Node3D" parent="." unique_id=1500800104]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.20777678, 2.7750332, 0.4268813)
+
+[node name="PlayerName" type="Label3D" parent="PlayerInfo" unique_id=1364089994]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
+text = "Player Name"
+font_size = 24
+
+[node name="PlayerLevel" type="Label3D" parent="PlayerInfo" unique_id=470131950]
+text = "Level: --"
+font_size = 18
+
+[node name="TotalBonus" type="Label3D" parent="PlayerInfo" unique_id=1913852133]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.5, 0)
+text = "Total Bonus: --"
+font_size = 18
+
+[node name="RaceInfo" type="Label3D" parent="PlayerInfo" unique_id=369057126]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 0.5, 0)
+text = "Race: --"
+font_size = 18
+
+[node name="ClassInfo" type="Label3D" parent="PlayerInfo" unique_id=1199563548]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 0, 0)
+text = "Class: --"
+font_size = 18
+
+[node name="EquipmentSlots" type="Node3D" parent="." unique_id=1710152027]
+
+[node name="HeadSlot" type="Node3D" parent="EquipmentSlots" unique_id=1519763374]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.5, 1.5, 0)
+
+[node name="HeadSlotMarker" type="MeshInstance3D" parent="EquipmentSlots/HeadSlot" unique_id=453490348]
+
+[node name="HeadSlotLabel" type="Label3D" parent="EquipmentSlots/HeadSlot" unique_id=1734999859]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.6, 0.03)
+text = "Head"
+font_size = 14
+
+[node name="ArmorSlot" type="Node3D" parent="EquipmentSlots" unique_id=1596607713]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, 0)
+
+[node name="ArmorSlotMarker" type="MeshInstance3D" parent="EquipmentSlots/ArmorSlot" unique_id=176932466]
+
+[node name="ArmorSlotLabel" type="Label3D" parent="EquipmentSlots/ArmorSlot" unique_id=55520981]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.6, 0.03)
+text = "Armor"
+font_size = 14
+
+[node name="FeetSlot" type="Node3D" parent="EquipmentSlots" unique_id=1957030775]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.5, 1.5, 0)
+
+[node name="FeetSlotMarker" type="MeshInstance3D" parent="EquipmentSlots/FeetSlot" unique_id=396195732]
+material_override = SubResource("StandardMaterial3D_slot_bg")
+
+[node name="FeetSlotLabel" type="Label3D" parent="EquipmentSlots/FeetSlot" unique_id=264916106]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.6, 0.03)
+text = "Feet"
+font_size = 14
+
+[node name="Hand1Slot" type="Node3D" parent="EquipmentSlots" unique_id=931298481]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.5, 0, 0)
+
+[node name="Hand1SlotMarker" type="MeshInstance3D" parent="EquipmentSlots/Hand1Slot" unique_id=1582985201]
+
+[node name="Hand1SlotLabel" type="Label3D" parent="EquipmentSlots/Hand1Slot" unique_id=789790917]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.6, 0.03)
+text = "Hand 1"
+font_size = 14
+
+[node name="Hand2Slot" type="Node3D" parent="EquipmentSlots" unique_id=1577387400]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.5, 0, 0)
+
+[node name="Hand2SlotMarker" type="MeshInstance3D" parent="EquipmentSlots/Hand2Slot" unique_id=2146683901]
+material_override = SubResource("StandardMaterial3D_slot_bg")
+
+[node name="Hand2SlotLabel" type="Label3D" parent="EquipmentSlots/Hand2Slot" unique_id=418892690]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.6, 0.03)
+text = "Hand 2"
+font_size = 14
+
+[node name="TwoHandsSlot" type="Node3D" parent="EquipmentSlots" unique_id=141736654]
+
+[node name="TwoHandsSlotMarker" type="MeshInstance3D" parent="EquipmentSlots/TwoHandsSlot" unique_id=803397782]
+material_override = SubResource("StandardMaterial3D_slot_bg")
+
+[node name="TwoHandsSlotLabel" type="Label3D" parent="EquipmentSlots/TwoHandsSlot" unique_id=102016430]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.6, 0.03)
+text = "Two Hands"
+font_size = 14
+
+[node name="CarriedEquipment" type="Node3D" parent="." unique_id=1929682794]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3, -2, 0)
+
+[node name="CarriedContainer" type="MeshInstance3D" parent="CarriedEquipment" unique_id=1867534771]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.22571278)
+material_override = SubResource("StandardMaterial3D_slot_bg")
+
+[node name="CarriedLabel" type="Label3D" parent="CarriedEquipment" unique_id=1461164136]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.2, 0.03)
+text = "Carried Equipment"
+font_size = 16
