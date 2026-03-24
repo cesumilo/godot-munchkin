@@ -1,6 +1,9 @@
-[gd_scene format=3 uid="uid://card_visual_scene"]
+[gd_scene format=3 uid="uid://c50qy5ve6ybpb"]
 
-[ext_resource type="Script" path="res://Scripts/Cards/CardVisual.cs" id="1_cardvis"]
+[ext_resource type="Script" uid="uid://dnmvktghdrq2d" path="res://Scripts/Cards/CardVisual.cs" id="1_cardvis"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_gucl5"]
+size = Vector3(0.7, 1, 0.05)
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_card"]
 albedo_color = Color(0.8, 0.8, 0.8, 1)
@@ -8,18 +11,23 @@ albedo_color = Color(0.8, 0.8, 0.8, 1)
 [sub_resource type="BoxMesh" id="BoxMesh_card"]
 size = Vector3(0.7, 1, 0.01)
 
-[node name="CardVisual" type="Node3D"]
+[node name="CardVisual" type="Node3D" unique_id=2125995193]
 script = ExtResource("1_cardvis")
 
-[node name="CardMesh" type="MeshInstance3D" parent="."]
-mesh = SubResource("BoxMesh_card")
-material_override = SubResource("StandardMaterial3D_card")
+[node name="Area3D" type="Area3D" parent="." unique_id=342586038]
 
-[node name="NameLabel" type="Label3D" parent="CardMesh"]
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Area3D" unique_id=1769737821]
+shape = SubResource("BoxShape3D_gucl5")
+
+[node name="CardMesh" type="MeshInstance3D" parent="." unique_id=470308952]
+material_override = SubResource("StandardMaterial3D_card")
+mesh = SubResource("BoxMesh_card")
+
+[node name="NameLabel" type="Label3D" parent="CardMesh" unique_id=1175894282]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.3, 0.006)
 text = "Card Name"
 
-[node name="DescriptionLabel" type="Label3D" parent="CardMesh"]
+[node name="DescriptionLabel" type="Label3D" parent="CardMesh" unique_id=246492566]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.2, 0.006)
 text = "Card Description"
 font_size = 16

@@ -1,16 +1,36 @@
 [gd_scene format=3 uid="uid://byuwkicmjoqua"]
 
 [ext_resource type="Script" uid="uid://eqe8x57p2tv7" path="res://Scripts/UI/EquipmentPanel.cs" id="1_equip"]
-[ext_resource type="PackedScene" path="res://Scenes/UI/CardVisual.tscn" id="2_or8pq"]
+[ext_resource type="PackedScene" uid="uid://c50qy5ve6ybpb" path="res://Scenes/UI/CardVisual.tscn" id="2_or8pq"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_or8pq"]
+size = Vector3(0.8, 1.2, 2)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_docaa"]
+size = Vector3(0.8, 1.2, 2)
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_slot_bg"]
 albedo_color = Color(0.2, 0.2, 0.3, 0.5)
 
-[node name="EquipmentPanel" type="Node3D" unique_id=1455354641 node_paths=PackedStringArray("_headSlotContainer", "_armorSlotContainer", "_feetSlotContainer", "_hand1SlotContainer", "_hand2SlotContainer", "_carriedEquipmentContainer", "_playerNameLabel", "_playerLevelLabel", "_totalBonusLabel", "_raceLabel", "_classLabel")]
+[sub_resource type="BoxShape3D" id="BoxShape3D_ajnf2"]
+size = Vector3(0.8, 1.2, 2)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_d4bdk"]
+size = Vector3(0.8, 1.2, 2)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_homba"]
+size = Vector3(0.8, 1.2, 2)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_43gs8"]
+size = Vector3(0.8, 1.2, 2)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_l5vbp"]
+size = Vector3(3.6, 3, 0.1)
+
+[node name="EquipmentPanel" type="Node3D" unique_id=1455354641 node_paths=PackedStringArray("_headSlotContainer", "_armorSlotContainer", "_hand1SlotContainer", "_hand2SlotContainer", "_carriedEquipmentContainer", "_playerNameLabel", "_playerLevelLabel", "_totalBonusLabel", "_raceLabel", "_classLabel")]
 script = ExtResource("1_equip")
 _headSlotContainer = NodePath("EquipmentSlots/HeadSlot")
 _armorSlotContainer = NodePath("EquipmentSlots/ArmorSlot")
-_feetSlotContainer = NodePath("EquipmentSlots/FeetSlot")
 _hand1SlotContainer = NodePath("EquipmentSlots/Hand1Slot")
 _hand2SlotContainer = NodePath("EquipmentSlots/Hand2Slot")
 _carriedEquipmentContainer = NodePath("CarriedEquipment/CarriedContainer")
@@ -60,6 +80,14 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.6, 0.03)
 text = "Head"
 font_size = 14
 
+[node name="HeadDropZone" type="Area3D" parent="EquipmentSlots/HeadSlot" unique_id=1775654070 groups=["drop_zones"]]
+collision_layer = 2
+collision_mask = 0
+metadata/slot = 0
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="EquipmentSlots/HeadSlot/HeadDropZone" unique_id=2108095318]
+shape = SubResource("BoxShape3D_or8pq")
+
 [node name="ArmorSlot" type="Node3D" parent="EquipmentSlots" unique_id=1596607713]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, 0)
 
@@ -69,6 +97,14 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, 0)
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.6, 0.03)
 text = "Armor"
 font_size = 14
+
+[node name="ArmorDropZone" type="Area3D" parent="EquipmentSlots/ArmorSlot" unique_id=429051148 groups=["drop_zones"]]
+collision_layer = 2
+collision_mask = 0
+metadata/slot = 1
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="EquipmentSlots/ArmorSlot/ArmorDropZone" unique_id=361456037]
+shape = SubResource("BoxShape3D_docaa")
 
 [node name="FeetSlot" type="Node3D" parent="EquipmentSlots" unique_id=1957030775]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.5, 1.5, 0)
@@ -81,6 +117,14 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.6, 0.03)
 text = "Feet"
 font_size = 14
 
+[node name="FleetDropZone" type="Area3D" parent="EquipmentSlots/FeetSlot" unique_id=1054053025 groups=["drop_zones"]]
+collision_layer = 2
+collision_mask = 0
+metadata/slot = 2
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="EquipmentSlots/FeetSlot/FleetDropZone" unique_id=447033551]
+shape = SubResource("BoxShape3D_ajnf2")
+
 [node name="Hand1Slot" type="Node3D" parent="EquipmentSlots" unique_id=931298481]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.5, 0, 0)
 
@@ -90,6 +134,14 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.5, 0, 0)
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.6, 0.03)
 text = "Hand 1"
 font_size = 14
+
+[node name="Hand1DropZone" type="Area3D" parent="EquipmentSlots/Hand1Slot" unique_id=68473337 groups=["drop_zones"]]
+collision_layer = 2
+collision_mask = 0
+metadata/slot = 3
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="EquipmentSlots/Hand1Slot/Hand1DropZone" unique_id=1104913902]
+shape = SubResource("BoxShape3D_d4bdk")
 
 [node name="Hand2Slot" type="Node3D" parent="EquipmentSlots" unique_id=1577387400]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.5, 0, 0)
@@ -102,6 +154,14 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.6, 0.03)
 text = "Hand 2"
 font_size = 14
 
+[node name="Hand2DropZone" type="Area3D" parent="EquipmentSlots/Hand2Slot" unique_id=6989898 groups=["drop_zones"]]
+collision_layer = 2
+collision_mask = 0
+metadata/slot = 4
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="EquipmentSlots/Hand2Slot/Hand2DropZone" unique_id=324679777]
+shape = SubResource("BoxShape3D_homba")
+
 [node name="TwoHandsSlot" type="Node3D" parent="EquipmentSlots" unique_id=141736654]
 
 [node name="TwoHandsSlotMarker" type="MeshInstance3D" parent="EquipmentSlots/TwoHandsSlot" unique_id=803397782]
@@ -111,6 +171,14 @@ material_override = SubResource("StandardMaterial3D_slot_bg")
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.6, 0.03)
 text = "Two Hands"
 font_size = 14
+
+[node name="TwoHandsDropZone" type="Area3D" parent="EquipmentSlots/TwoHandsSlot" unique_id=855560886 groups=["drop_zones"]]
+collision_layer = 2
+collision_mask = 0
+metadata/slot = 5
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="EquipmentSlots/TwoHandsSlot/TwoHandsDropZone" unique_id=1544169367]
+shape = SubResource("BoxShape3D_43gs8")
 
 [node name="CarriedEquipment" type="Node3D" parent="." unique_id=1929682794]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3, -2, 0)
@@ -123,3 +191,12 @@ material_override = SubResource("StandardMaterial3D_slot_bg")
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.2, 0.03)
 text = "Carried Equipment"
 font_size = 16
+
+[node name="CarriedDropZone" type="Area3D" parent="CarriedEquipment" unique_id=879345961]
+collision_layer = 2
+collision_mask = 0
+metadata/slot = 6
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="CarriedEquipment/CarriedDropZone" unique_id=15145924]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.5, -0.5, 0)
+shape = SubResource("BoxShape3D_l5vbp")

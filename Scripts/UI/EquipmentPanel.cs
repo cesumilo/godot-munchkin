@@ -280,6 +280,9 @@ public partial class EquipmentPanel : Node3D
         _cardVisuals[itemData.Id] = cardVisualInstance;
 
         GD.Print($"[EquipmentPanel] Created card visual for: {itemData.Name} at {position}");
+
+        // Add drag handler if enabled
+        AddDragDropHandler(cardVisualInstance, itemData, isWorn);
     }
 
     private void CreateSimpleCardVisual(Node3D parent, ItemCardData itemData, bool isWorn = true)
@@ -408,5 +411,84 @@ public partial class EquipmentPanel : Node3D
             _gameStateManager.OnLocalPlayerUpdated -= UpdatePlayerState;
             _gameStateManager.OnGameStateUpdated -= OnGameStateUpdated;
         }
+    }
+
+    private void AddDragDropHandler(Node3D cardVisual, ItemCardData itemData, bool isWorn)
+    {
+        var dragHandler = new DragDropHandler();
+        cardVisual.AddChild(dragHandler);
+        // Connect signals
+        dragHandler.DragStarted += OnDragStarted;
+        dragHandler.DragEnded += OnDragEnded;
+        dragHandler.DroppedOnSlot += OnDroppedOnSlot;
+        // Set card data
+        dragHandler.SetCardData(itemData.Id, itemData);
+        GD.Print($"[EquipmentPanel] Added drag handler to: {itemData.Name}");
+    }
+
+    private void OnDragStarted(Node3D draggable)
+    {
+        GD.Print($"[EquipmentPanel] Drag started: {draggable.Name}");
+        // TODO: Highlight valid drop slots
+    }
+
+    private void OnDragEnded(Node3D draggable, Vector3 position)
+    {
+        GD.Print($"[EquipmentPanel] Drag ended at: {position}");
+        // TODO: Remove slot highlights
+    }
+
+    private void OnDroppedOnSlot(Node3D draggable, int slotInt)
+    {
+        EquipmentSlot slot = (EquipmentSlot)slotInt;
+        GD.Print($"[EquipmentPanel] Dropped on slot: {slot}");
+        // Find which card was dragged
+        var dragHandler = draggable.GetNodeOrNull<DragDropHandler>(".");
+        if (dragHandler == null)
+        {
+            GD.PrintErr("[EquipmentPanel] No DragDropHandler found on draggable");
+            return;
+        }
+        // Get card visual (parent of DragDropHandler)
+        var cardVisual = draggable.GetParent() as CardVisual;
+        if (cardVisual == null || cardVisual.CardData == null)
+        {
+            GD.PrintErr("[EquipmentPanel] Could not get CardVisual or CardData from draggable");
+            return;
+        }
+        var cardData = cardVisual.CardData;
+        GD.Print($"[EquipmentPanel] Found card data: {cardData.Name} (ID: {cardData.Id})");
+        if (_playerState == null)
+        {
+            GD.PrintErr("[EquipmentPanel] No PlayerState set on EquipmentPanel");
+            return;
+        }
+        // Check if item is currently equipped or carried
+        bool isEquipped = _playerState.WornEquipmentIds.Contains(cardData.Id);
+        bool isCarried = _playerState.CarriedEquipmentIds.Contains(cardData.Id);
+        GD.Print($"[EquipmentPanel] Item state: Equipped={isEquipped}, Carried={isCarried}");
+        if (slot == EquipmentSlot.None)
+        {
+            // Dropping in carried zone
+            if (isEquipped)
+            {
+                // Unequip item
+                GD.Print($"[EquipmentPanel] Attempting to unequip {cardData.Name}...");
+                bool success = _playerState.UnequipItem(cardData.Id);
+                GD.Print($"[EquipmentPanel] Unequip result: {success}");
+            }
+            // If already carried, no state change needed
+        }
+        else if (isCarried)
+        {
+            // Try to equip from carried
+            GD.Print($"[EquipmentPanel] Attempting to equip {cardData.Name}...");
+            bool success = _playerState.EquipItem(cardData.Id);
+            GD.Print($"[EquipmentPanel] Equip result: {success}");
+        }
+        // else if (isEquipped): moving between slots - just visual for now
+        // Update bonus display
+        UpdatePlayerInfo();
+        GD.Print($"[EquipmentPanel] Bonus updated: {_playerState.TotalCombatBonus}");
     }
 }

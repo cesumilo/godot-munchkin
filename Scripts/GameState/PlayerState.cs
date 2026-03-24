@@ -117,41 +117,55 @@ public partial class PlayerState
         if (item.Slot == EquipmentSlot.None)
             return true;
 
-        // Check if slot is already occupied
+        // Count occupied hand slots
+        int occupiedHandSlots = 0;
+        bool hasTwoHandedItem = false;
+
         foreach (var wornId in WornEquipmentIds)
         {
             var wornItem = GetItemData(wornId);
             if (wornItem != null)
             {
-                // Two-handed items occupy both hand slots
-                if (item.Slot == EquipmentSlot.TwoHands)
+                if (wornItem.Slot == EquipmentSlot.TwoHands)
                 {
-                    if (
-                        wornItem.Slot == EquipmentSlot.Hand1
-                        || wornItem.Slot == EquipmentSlot.Hand2
-                        || wornItem.Slot == EquipmentSlot.TwoHands
-                    )
-                        return false;
+                    hasTwoHandedItem = true;
+                    occupiedHandSlots += 2; // Two-handed occupies both
                 }
-                // One-handed items conflict with two-handed items
-                else if (item.Slot == EquipmentSlot.Hand1 || item.Slot == EquipmentSlot.Hand2)
+                else if (
+                    wornItem.Slot == EquipmentSlot.Hand1
+                    || wornItem.Slot == EquipmentSlot.Hand2
+                )
                 {
-                    if (wornItem.Slot == EquipmentSlot.TwoHands)
-                        return false;
-
-                    // Check for same slot
-                    if (wornItem.Slot == item.Slot)
-                        return false;
-                }
-                else if (wornItem.Slot == item.Slot)
-                {
-                    // Same slot (head, armor, feet) - only one allowed
-                    return false;
+                    occupiedHandSlots += 1;
                 }
             }
         }
 
-        return true;
+        // Check slot availability
+        if (item.Slot == EquipmentSlot.TwoHands)
+        {
+            // Two-handed item needs both hand slots free
+            return occupiedHandSlots == 0;
+        }
+        else if (item.Slot == EquipmentSlot.Hand1 || item.Slot == EquipmentSlot.Hand2)
+        {
+            // One-handed item needs at least one hand slot free
+            // And no two-handed item equipped
+            return !hasTwoHandedItem && occupiedHandSlots < 2;
+        }
+        else
+        {
+            // Head, Armor, Foot - check if slot already occupied
+            foreach (var wornId in WornEquipmentIds)
+            {
+                var wornItem = GetItemData(wornId);
+                if (wornItem != null && wornItem.Slot == item.Slot)
+                {
+                    return false;
+                }
+            }
+            return true;
+        }
     }
 
     private bool CanCarryAnotherBigItem()
