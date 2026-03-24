@@ -4,25 +4,25 @@
 [ext_resource type="PackedScene" uid="uid://c50qy5ve6ybpb" path="res://Scenes/UI/CardVisual.tscn" id="2_or8pq"]
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_or8pq"]
-size = Vector3(0.8, 1.2, 2)
+size = Vector3(0.8, 1.2, 0.1)
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_docaa"]
-size = Vector3(0.8, 1.2, 2)
+size = Vector3(0.8, 1.2, 0.1)
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_slot_bg"]
 albedo_color = Color(0.2, 0.2, 0.3, 0.5)
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_ajnf2"]
-size = Vector3(0.8, 1.2, 2)
+size = Vector3(0.8, 1.2, 0.1)
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_d4bdk"]
-size = Vector3(0.8, 1.2, 2)
+size = Vector3(0.8, 1.2, 0.1)
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_homba"]
-size = Vector3(0.8, 1.2, 2)
+size = Vector3(0.8, 1.2, 0.1)
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_43gs8"]
-size = Vector3(0.8, 1.2, 2)
+size = Vector3(0.8, 1.2, 0.1)
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_l5vbp"]
 size = Vector3(3.6, 3, 0.1)
