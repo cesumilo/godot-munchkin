@@ -107,7 +107,7 @@ The implementation follows the official Munchkin rules document (`AGENTS.md`) wh
 
 ## 📄 License
 
-[MIT License](LICENSE) - See LICENSE file for details.
+[Apache-2.0](LICENSE) - See LICENSE file for details.
 
 ## 🤝 Contributing
 
