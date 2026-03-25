@@ -11,10 +11,10 @@ A player can complete one full turn cycle on screen, driven by mock server messa
 | System | Status | Key Files |
 |--------|--------|-----------|
 | Auth (login, JWT) | Done | `Scripts/UI/Main.cs`, `Scenes/Main/Main.tscn` |
-| Lobby (list/create/join/start, WS connect) | Done | `Scripts/UI/Lobby.cs`, `Scenes/Lobby/Lobby.tscn` |
+| Lobby (list/create/join via HTTP) | Done | `Scripts/UI/Lobby.cs`, `Scenes/Lobby/Lobby.tscn` — HTTP API calls only, no WebSocket lobby events |
 | WebSocketClient | Done | `Scripts/Networking/WebSocketClient.cs` — poll, send, receive, reconnect, message queue |
 | NetworkManager (autoload) | Done | `Scripts/Networking/NetworkManager.cs` — singleton, `ConnectToLobby()`, `SendPlayerAction()`, `SendPlayCard()` |
-| MessageProtocol | Done | `Scripts/Networking/MessageProtocol.cs` — all message types, builders, parsers, `WebSocketMessage.ToJson()` |
+| MessageProtocol | Partially done | `Scripts/Networking/MessageProtocol.cs` — missing lobby message types per updated PROTOCOL.md |
 | Card data model | Done | `Scripts/Cards/CardData.cs`, `ItemCardData.cs`, `MonsterCardData.cs`, `CurseCardData.cs`, `RaceCardData.cs`, `ClassCardData.cs`, `ActionCardData.cs`, `Enums.cs` |
 | CardFactory (autoload) | Done | `Scripts/Cards/CardFactory.cs` — loads `.tres` from `Resources/Cards/Definitions/`, lookup by ID/type |
 | CardVisual (simple 3D) | Done | `Scripts/Cards/CardVisual.cs` — color-coded mesh + labels |
@@ -25,6 +25,7 @@ A player can complete one full turn cycle on screen, driven by mock server messa
 | Card3D plugin (GDScript) | Available | `addons/card_3d/` — Card3D, CardCollection3D, DragController, layouts (Line/Fan/Pile) |
 | Sample .tres cards | 12 cards | 2 monsters, 2 items, 1 curse, 2 races, 2 classes, 2 actions, 1 test card |
 | Game Board scene | Missing | No `Scenes/Game/` directory exists |
+| **Lobby WebSocket Events** | **Missing** | Need `LOBBY_STATE`, `PLAYER_JOINED`, `GAME_STARTING`, etc. as defined in PROTOCOL.md v1.1 |
 
 ## Card3D Plugin API (GDScript — called from C# via Godot node API)
 
@@ -68,6 +69,242 @@ The Card3D plugin is GDScript. Our game code is C#. We cannot inherit from Card3
 2. Create `Scripts/Cards/MunchkinCard3D.cs` — a C# helper class (not a node script) with static methods to instantiate and configure MunchkinCard3D scenes. Interacts with the GDScript node via `node.Set()`, `node.Call()`, `node.GetNode()`.
 
 This is exactly how `example_battle/` works: `BattleCard3D.gd` extends `Card3D`, `battle.gd` creates instances and sets properties.
+
+---
+
+## Step 0: Lobby WebSocket Protocol Integration
+
+### Purpose
+Update the existing systems to use the new WebSocket-based lobby events per PROTOCOL.md v1.1, replacing the pure HTTP lobby management with real-time WebSocket events for player join/leave, ready status, and game start.
+
+### Files to Modify
+
+#### `Scripts/Networking/MessageProtocol.cs` — Add lobby message types:
+```csharp
+// ============== CLIENT MESSAGE TYPES ==============
+// ... existing types ...
+
+// Lobby message types (new)
+public const string SET_READY = "SET_READY";
+public const string CHANGE_SETTINGS = "CHANGE_SETTINGS";
+public const string KICK_PLAYER = "KICK_PLAYER";
+public const string START_GAME = "START_GAME";
+public const string LOBBY_CHAT = "LOBBY_CHAT";
+
+// Remove JOIN_GAME (automatic via WebSocket connection + JWT)
+
+// ============== SERVER MESSAGE TYPES ==============
+// ... existing types ...
+
+// Lobby message types (new)
+public const string LOBBY_STATE = "LOBBY_STATE";
+public const string PLAYER_JOINED = "PLAYER_JOINED";
+public const string PLAYER_LEFT = "PLAYER_LEFT";
+public const string PLAYER_READY_CHANGE = "PLAYER_READY_CHANGE";
+public const string LOBBY_SETTINGS_CHANGE = "LOBBY_SETTINGS_CHANGE";
+public const string GAME_STARTING = "GAME_STARTING";
+public const string GAME_STARTED = "GAME_STARTED";
+public const string LOBBY_CHAT_MESSAGE = "LOBBY_CHAT_MESSAGE";
+
+// ============== ENUMERATIONS ==============
+// ... existing enums ...
+
+/// <summary>
+/// Lobby player data structure
+/// </summary>
+public record LobbyPlayerData
+{
+    public string Id { get; set; }
+    public string Name { get; set; }
+    public bool IsHost { get; set; }
+    public bool IsReady { get; set; }
+    public string Avatar { get; set; }
+}
+
+/// <summary>
+/// Lobby settings
+/// </summary>
+public record LobbySettingsData
+{
+    public bool TimerEnabled { get; set; }
+    public int TurnTimeLimit { get; set; }
+    public int CombatInteractionTime { get; set; }
+}
+
+/// <summary>
+/// Full lobby state data
+/// </summary>
+public record LobbyStateData
+{
+    public string LobbyId { get; set; }
+    public string HostId { get; set; }
+    public List<LobbyPlayerData> Players { get; set; }
+    public bool GameInProgress { get; set; }
+    public int MaxPlayers { get; set; }
+    public int CurrentPlayers { get; set; }
+    public LobbySettingsData Settings { get; set; }
+}
+
+// ============== MESSAGE BUILDERS ==============
+// Add after existing builders:
+
+public static WebSocketMessage CreateSetReadyMessage(bool isReady)
+{
+    return new WebSocketMessage
+    {
+        Type = SET_READY,
+        Data = new Godot.Collections.Dictionary
+        {
+            ["is_ready"] = isReady
+        }
+    };
+}
+
+public static WebSocketMessage CreateStartGameMessage(bool forceStart = false)
+{
+    return new WebSocketMessage
+    {
+        Type = START_GAME,
+        Data = new Godot.Collections.Dictionary
+        {
+            ["force_start"] = forceStart
+        }
+    };
+}
+
+// ... other lobby message builders ...
+
+// ============== MESSAGE PARSERS ==============
+// Add after existing parsers:
+
+public static LobbyStateData ParseLobbyState(Godot.Collections.Dictionary data)
+{
+    // Parse LOBBY_STATE message data into LobbyStateData object
+    // ...
+}
+```
+
+#### `Scripts/UI/Lobby.cs` — Update to handle WebSocket lobby events:
+The existing `Lobby.cs` uses HTTP API for lobby management. We need to update it to:
+1. Connect to WebSocket after joining a lobby (currently `ConnectToLobby()` just stores URL)
+2. Handle lobby WebSocket messages (`LOBBY_STATE`, `PLAYER_JOINED`, etc.)
+3. Update UI based on real-time lobby events
+
+Key changes:
+- After successful HTTP lobby join, connect to WebSocket: `NetworkManager.Instance.ConnectToLobby()`
+- Subscribe to WebSocket messages for lobby events
+- Replace periodic HTTP polling with WebSocket events
+- Add UI for ready status, player list with ready indicators, lobby chat
+
+#### `Scripts/Networking/NetworkManager.cs` — Add lobby message handlers:
+```csharp
+// Add to existing NetworkManager class:
+
+private LobbyStateData _currentLobbyState = null;
+
+public void SendLobbyReady(bool isReady)
+{
+    if (WebSocketClient.IsConnected)
+    {
+        var message = MessageProtocol.CreateSetReadyMessage(isReady);
+        WebSocketClient.SendMessage(message.ToJson());
+    }
+}
+
+public void SendStartGame(bool forceStart = false)
+{
+    if (WebSocketClient.IsConnected)
+    {
+        var message = MessageProtocol.CreateStartGameMessage(forceStart);
+        WebSocketClient.SendMessage(message.ToJson());
+    }
+}
+
+private void HandleLobbyMessage(string type, Godot.Collections.Dictionary data)
+{
+    switch (type)
+    {
+        case MessageProtocol.LOBBY_STATE:
+            HandleLobbyStateMessage(data);
+            break;
+        case MessageProtocol.PLAYER_JOINED:
+            HandlePlayerJoinedMessage(data);
+            break;
+        case MessageProtocol.PLAYER_LEFT:
+            HandlePlayerLeftMessage(data);
+            break;
+        case MessageProtocol.PLAYER_READY_CHANGE:
+            HandlePlayerReadyChangeMessage(data);
+            break;
+        case MessageProtocol.GAME_STARTING:
+            HandleGameStartingMessage(data);
+            break;
+        case MessageProtocol.GAME_STARTED:
+            HandleGameStartedMessage(data);
+            break;
+        case MessageProtocol.LOBBY_CHAT_MESSAGE:
+            HandleLobbyChatMessage(data);
+            break;
+    }
+}
+```
+
+#### `Scripts/UI/LobbyManager.cs` — New file for lobby UI management:
+```csharp
+public partial class LobbyManager : Node
+{
+    // Manages lobby UI state, player list, ready status, chat
+    // Integrates with existing Lobby.cs for HTTP operations
+    // Handles WebSocket lobby events from NetworkManager
+}
+```
+
+### MockServer Updates for Lobby
+#### `Scripts/Networking/MockServer.cs` (to be created in Step 2) — Add lobby initialization:
+```csharp
+public class MockServer
+{
+    // Add lobby state
+    private LobbyStateData _mockLobbyState = null;
+    
+    public void InitializeLobby(string lobbyId, string hostId, List<LobbyPlayerData> players)
+    {
+        // Setup mock lobby state
+        // For mock server: simulate player joins, ready status changes
+        // When host starts game: transition to game state
+    }
+    
+    // Add lobby message handling
+    public void ProcessLobbyMessage(string messageType, Godot.Collections.Dictionary data)
+    {
+        switch (messageType)
+        {
+            case "SET_READY":
+                HandleSetReady(data);
+                break;
+            case "START_GAME":
+                HandleStartGame(data);
+                break;
+        }
+    }
+    
+    private void HandleStartGame(Godot.Collections.Dictionary data)
+    {
+        // Emit GAME_STARTING countdown
+        // After delay, emit GAME_STARTED with initial game state
+        // Call Initialize() with mock players
+    }
+}
+```
+
+### Test Procedure
+1. `dotnet build` — 0 errors
+2. `dotnet csharpier format .`
+3. Run project, login, create lobby
+4. Verify: After joining lobby, WebSocket connects and receives `LOBBY_STATE`
+5. Verify: UI shows player list with ready status
+6. Verify: Host can start game, receives `GAME_STARTING` countdown, then `GAME_STARTED`
+7. Verify: Non-host players see same lobby updates in real-time
 
 ---
 
@@ -206,41 +443,118 @@ public partial class MockServer
     // Events — MockServer fires these, NetworkManager routes them
     public event Action<string, Godot.Collections.Dictionary> OnServerMessage;
     
-    // Initialize with 3 mock players and full decks
-    public void Initialize(string localPlayerId)
+    // Lobby state (for Step 0 integration)
+    private LobbyStateData _lobbyState = null;
+    private bool _gameStarted = false;
+    
+    // Initialize lobby with mock players
+    public void InitializeLobby(string lobbyId, string hostId, string localPlayerId, List<LobbyPlayerData> players)
     {
+        _lobbyState = new LobbyStateData
+        {
+            LobbyId = lobbyId,
+            HostId = hostId,
+            Players = players,
+            GameInProgress = false,
+            MaxPlayers = 6,
+            CurrentPlayers = players.Count,
+            Settings = new LobbySettingsData
+            {
+                TimerEnabled = false,
+                TurnTimeLimit = 120,
+                CombatInteractionTime = 30
+            }
+        };
+        _gameStarted = false;
+        
+        // Emit initial LOBBY_STATE
+        EmitLobbyState();
+    }
+    
+    // Start game from lobby
+    public void StartGame()
+    {
+        if (_gameStarted) return;
+        
+        // Emit GAME_STARTING countdown
+        EmitGameStarting(5); // 5 second countdown
+        
+        // After delay, emit GAME_STARTED and initialize game
+        // (In real implementation, use SceneTree.CreateTimer or Task.Delay)
+        // For now, just call InitializeGame() directly
+        InitializeGame();
+    }
+    
+    // Initialize with 3 mock players and full decks (called from StartGame)
+    private void InitializeGame(string localPlayerId = null)
+    {
+        _gameStarted = true;
+        
         // Create 3 players (local player + 2 bots)
         // Build dungeon deck from all CardFactory dungeon cards (repeat IDs to fill 95 cards)
         // Build treasure deck from all CardFactory treasure cards (repeat IDs to fill 73 cards)
         // Shuffle both decks
         // Deal 4 dungeon + 4 treasure to each player
         // Set phase to OPEN_DOOR, active player = 0
-        // Emit initial GAME_STATE
+        // Emit GAME_STARTED with initial GAME_STATE
+        EmitGameStarted();
     }
     
     // Process incoming client message
     public void ProcessMessage(string messageType, Godot.Collections.Dictionary data)
     {
-        switch (messageType)
+        if (!_gameStarted)
         {
-            case "JOIN_GAME":
-                HandleJoinGame(data);
-                break;
-            case "PLAYER_ACTION":
-                HandlePlayerAction(data);
-                break;
-            case "COMBAT_RESPONSE":
-                HandleCombatResponse(data);
-                break;
-            case "PLAY_CARD":
-                HandlePlayCard(data);
-                break;
+            // Lobby phase messages
+            switch (messageType)
+            {
+                case "SET_READY":
+                    HandleSetReady(data);
+                    return;
+                case "START_GAME":
+                    HandleStartGame(data);
+                    return;
+                case "LOBBY_CHAT":
+                    HandleLobbyChat(data);
+                    return;
+            }
+        }
+        else
+        {
+            // Game phase messages
+            switch (messageType)
+            {
+                case "PLAYER_ACTION":
+                    HandlePlayerAction(data);
+                    break;
+                case "COMBAT_RESPONSE":
+                    HandleCombatResponse(data);
+                    break;
+                case "PLAY_CARD":
+                    HandlePlayCard(data);
+                    break;
+            }
         }
     }
     
-    private void HandleJoinGame(data)
+    private void HandleSetReady(Godot.Collections.Dictionary data)
     {
-        // Emit GAME_STATE with full state
+        bool isReady = (bool)data["is_ready"];
+        // Update local player ready status in lobby state
+        // Emit PLAYER_READY_CHANGE message
+    }
+    
+    private void HandleStartGame(Godot.Collections.Dictionary data)
+    {
+        bool forceStart = data.ContainsKey("force_start") && (bool)data["force_start"];
+        // Check if all players ready or force start
+        StartGame();
+    }
+    
+    private void HandleLobbyChat(Godot.Collections.Dictionary data)
+    {
+        string message = (string)data["message"];
+        // Emit LOBBY_CHAT_MESSAGE back to all players
     }
     
     private void HandlePlayerAction(data)
@@ -309,6 +623,51 @@ public partial class MockServer
         string result, int playerForce, int monsterForce,
         Godot.Collections.Dictionary rewards,
         Godot.Collections.Dictionary penalty) { ... }
+    
+    // Helper: build LOBBY_STATE dictionary
+    private Godot.Collections.Dictionary BuildLobbyState()
+    {
+        // Convert _lobbyState to dictionary format per PROTOCOL.md
+        // ...
+    }
+    
+    // Helper: emit LOBBY_STATE message
+    private void EmitLobbyState()
+    {
+        EmitMessage("LOBBY_STATE", BuildLobbyState());
+    }
+    
+    // Helper: emit PLAYER_READY_CHANGE message
+    private void EmitPlayerReadyChange(string playerId, bool isReady)
+    {
+        EmitMessage("PLAYER_READY_CHANGE", new Godot.Collections.Dictionary
+        {
+            ["player_id"] = playerId,
+            ["is_ready"] = isReady
+        });
+    }
+    
+    // Helper: emit GAME_STARTING message
+    private void EmitGameStarting(int countdownSeconds)
+    {
+        EmitMessage("GAME_STARTING", new Godot.Collections.Dictionary
+        {
+            ["countdown"] = countdownSeconds,
+            ["reason"] = "ALL_READY"
+        });
+    }
+    
+    // Helper: emit GAME_STARTED message (includes initial GAME_STATE)
+    private void EmitGameStarted()
+    {
+        // First emit GAME_STARTED
+        EmitMessage("GAME_STARTED", new Godot.Collections.Dictionary
+        {
+            ["first_player_id"] = _players[0].PlayerId,
+            ["initial_hand_size"] = 8,
+            ["initial_state"] = BuildGameState()  // Full game state
+        });
+    }
     
     // Helper: emit message via event
     private void EmitMessage(string type, Godot.Collections.Dictionary data)
@@ -757,24 +1116,27 @@ private void TransitionToGame()
 }
 ```
 
-Also update `HandleStartGameResponse()` (line 748) to call `TransitionToGame()`:
+Also update `HandleGameStartedMessage()` to call `TransitionToGame()`:
 ```csharp
-private void HandleStartGameResponse(string responseBody)
+private void HandleGameStartedMessage(Godot.Collections.Dictionary data)
 {
-    GD.Print($"[Lobby] Start game response: {responseBody}");
-    ShowStatus("Game started!", false);
+    GD.Print("[Lobby] Received GAME_STARTED — transitioning to game");
+    ShowStatus("Game starting!", false);
     TransitionToGame();
 }
 ```
 
-And the `OnWebSocketConnectionStateChanged` handler (line 784): When in the lobby and connected, if the host presses start, `HandleStartGameResponse` triggers the transition. For non-host players, the server should send a `GAME_STATE` that also triggers transition — add this to `HandleGameStateMessage`:
+Update `HandleStartGameResponse()` to just show status (game transition happens via WebSocket `GAME_STARTED`):
 ```csharp
-private void HandleGameStateMessage(Godot.Collections.Dictionary data)
+private void HandleStartGameResponse(string responseBody)
 {
-    GD.Print("[Lobby] Received GAME_STATE — transitioning to game");
-    TransitionToGame();
+    GD.Print($"[Lobby] Start game response: {responseBody}");
+    ShowStatus("Game starting countdown...", false);
+    // Transition will happen via GAME_STARTED WebSocket message
 }
 ```
+
+For the mock server path (`UseMockServer = true`), we need to simulate the WebSocket flow: When host clicks "Start Game" in mock mode, MockServer should emit `GAME_STARTING` countdown, then `GAME_STARTED` after delay.
 
 ### GameStateMachine Modification
 `Scripts/GameState/GameStateMachine.cs` — Relax `IsValidTransition` to accept server-driven phase jumps. The mock server might set phases directly. Change `TransitionToPhase` to use `SetPhase` when the phase comes from the server (via GameStateManager). The existing `SetPhase()` method already bypasses validation — this is fine for server-driven updates.
@@ -1190,21 +1552,22 @@ These go in `Resources/Cards/Definitions/Monsters/`, `Items/`, `Curses/` as `.tr
 
 ## Dependency Order
 
+0. **Step 0: Lobby WebSocket Protocol Integration** (depends on: existing MessageProtocol, NetworkManager, Lobby)
 1. **Step 1: MunchkinCard3D** (no dependencies)
-2. **Step 2: MockServer** (depends on: CardFactory, PlayerState, MessageProtocol)
-3. **Step 3: GameBoard Scene** (depends on: Step 1, Step 2, Card3D plugin)
+2. **Step 2: MockServer** (depends on: Step 0, CardFactory, PlayerState, MessageProtocol)
+3. **Step 3: GameBoard Scene** (depends on: Step 0, Step 1, Step 2, Card3D plugin)
 4. **Step 4: Hand Cards Display** (depends on: Step 1, Step 3)
 5. **Step 5: Turn Flow** (depends on: Step 2, Step 3, Step 4)
 6. **Step 6: Combat UI** (depends on: Step 2, Step 3, Step 5)
 7. **Step 7: Polish + Multi-Turn** (depends on: all above)
 
-Steps 1 and 2 can be done in parallel. Steps 3 depends on both. Steps 4-7 are sequential.
+Steps 0 and 1 can be done in parallel. Step 2 depends on Step 0. Step 3 depends on all previous.
 
 ---
 
 ## Files Summary
 
-### New Files (7)
+### New Files (8)
 | File | Type | Purpose |
 |------|------|---------|
 | `Scripts/Cards/munchkin_card_3d.gd` | GDScript | Card3D extension with Munchkin card properties |
@@ -1214,16 +1577,18 @@ Steps 1 and 2 can be done in parallel. Steps 3 depends on both. Steps 4-7 are se
 | `Scenes/Game/GameBoard.tscn` | Scene | Main game board with table, collections, UI overlay |
 | `Scripts/UI/GameBoard.cs` | C# | Game board controller |
 | `Scenes/Test/CardVisualTest.tscn` | Scene | Test scene for MunchkinCard3D visuals |
+| `Scripts/UI/LobbyManager.cs` | C# | Lobby UI state manager for WebSocket events (Step 0) |
 
-### Modified Files (6)
+### Modified Files (7)
 | File | Change |
 |------|--------|
-| `Scripts/Networking/NetworkManager.cs` | Add `UseMockServer` export, MockServer field, mock routing, `InitializeMockGame()`, `SendCombatResponse()` |
+| `Scripts/Networking/MessageProtocol.cs` | Add lobby message types (`LOBBY_STATE`, `PLAYER_JOINED`, etc.), data structures, message builders/parsers (Step 0) |
+| `Scripts/Networking/NetworkManager.cs` | Add lobby message handlers, `SendLobbyReady()`, `SendStartGame()`, mock lobby support (Step 0) + `UseMockServer`, MockServer field, mock routing, `InitializeMockGame()`, `SendCombatResponse()` |
 | `Scripts/Networking/WebSocketClient.cs` | Add `InjectMessage()` public method |
-| `Scripts/UI/Lobby.cs` | Update `TransitionToGame()` to load GameBoard, update `HandleStartGameResponse()` and `HandleGameStateMessage()` |
+| `Scripts/UI/Lobby.cs` | Update to use WebSocket lobby events, integrate with LobbyManager, real-time player updates (Step 0) + update `TransitionToGame()` to load GameBoard, update `HandleStartGameResponse()` and `HandleGameStateMessage()` |
 | `Scripts/GameState/GameStateManager.cs` | Add combat/phase events, set `LocalPlayerId` from `Main.PlayerId`, parse combat resolution |
 | `Scripts/GameState/GameStateMachine.cs` | Add OpenDoor → Charity transition, relax validation for server-driven jumps |
 | `Resources/Cards/Definitions/` | Add ~12 more `.tres` card definitions (monsters, items, curses) |
 
 ### Unchanged Files
-All existing files not listed above remain untouched: `Main.cs`, `CardData.cs`, `ItemCardData.cs`, `MonsterCardData.cs`, `CurseCardData.cs`, `RaceCardData.cs`, `ClassCardData.cs`, `ActionCardData.cs`, `Enums.cs`, `CardFactory.cs`, `CardVisual.cs`, `PlayerState.cs`, `EquipmentPanel.cs`, `DragDropHandler.cs`, `MessageProtocol.cs`, `PROTOCOL.md`.
+All existing files not listed above remain untouched: `Main.cs`, `CardData.cs`, `ItemCardData.cs`, `MonsterCardData.cs`, `CurseCardData.cs`, `RaceCardData.cs`, `ClassCardData.cs`, `ActionCardData.cs`, `Enums.cs`, `CardFactory.cs`, `CardVisual.cs`, `PlayerState.cs`, `EquipmentPanel.cs`, `DragDropHandler.cs`, `PROTOCOL.md`.
