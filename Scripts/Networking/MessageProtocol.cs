@@ -3,124 +3,300 @@ using System.Collections.Generic;
 using Godot;
 
 /// <summary>
-/// Message protocol for Munchkin WebSocket communication
-/// Based on PROTOCOL.md specification
+/// Defines the WebSocket message protocol for Munchkin client-server communication.
+/// Based on the networking architecture specification with JSON-based message format.
 /// </summary>
+/// <remarks>
+/// Per AGENTS.md architecture: Uses typed JSON messages for real-time gameplay.
+/// All cards referenced by unique IDs; full card data maintained locally by both client and server.
+/// </remarks>
 public static class MessageProtocol
 {
     // ============== CLIENT MESSAGE TYPES ==============
 
-    public const string JOIN_GAME = "JOIN_GAME";
+    // Note: JOIN_GAME is not needed - player joining is implicit via WebSocket connection + JWT
+    /// <summary>
+    /// Client message type for player actions during their turn.
+    /// </summary>
     public const string PLAYER_ACTION = "PLAYER_ACTION";
+
+    /// <summary>
+    /// Client message type for playing a card from hand.
+    /// </summary>
     public const string PLAY_CARD = "PLAY_CARD";
+
+    /// <summary>
+    /// Client message type for combat responses (flee, accept alliance, etc.).
+    /// </summary>
     public const string COMBAT_RESPONSE = "COMBAT_RESPONSE";
+
+    /// <summary>
+    /// Client message type for negotiation actions (offers, counter-offers, accept/reject).
+    /// </summary>
     public const string NEGOTIATION = "NEGOTIATION";
+
+    /// <summary>
+    /// Client message type for using class abilities.
+    /// </summary>
     public const string USE_ABILITY = "USE_ABILITY";
 
     // ============== SERVER MESSAGE TYPES ==============
 
+    /// <summary>
+    /// Server message type for full game state updates.
+    /// </summary>
     public const string GAME_STATE = "GAME_STATE";
+
+    /// <summary>
+    /// Server message type for turn phase change notifications.
+    /// </summary>
     public const string TURN_PHASE_CHANGE = "TURN_PHASE_CHANGE";
+
+    /// <summary>
+    /// Server message type when combat begins.
+    /// </summary>
     public const string COMBAT_START = "COMBAT_START";
+
+    /// <summary>
+    /// Server message type for combat resolution results.
+    /// </summary>
     public const string COMBAT_RESOLUTION = "COMBAT_RESOLUTION";
+
+    /// <summary>
+    /// Server message type for card play results.
+    /// </summary>
     public const string CARD_PLAY_RESULT = "CARD_PLAY_RESULT";
+
+    /// <summary>
+    /// Server message type for individual player state updates.
+    /// </summary>
     public const string PLAYER_UPDATE = "PLAYER_UPDATE";
+
+    /// <summary>
+    /// Server message type for error notifications.
+    /// </summary>
     public const string ERROR = "ERROR";
 
     // ============== ENUMERATIONS ==============
 
     /// <summary>
-    /// Player actions during their turn
+    /// Defines player actions available during their turn per §7.
     /// </summary>
+    /// <remarks>
+    /// Per §7: Actions are phase-dependent. OPEN_DOOR is automatic, others are player choices.
+    /// </remarks>
     public enum PlayerActionType
     {
+        /// <summary>
+        /// Per §7.1: Open top card of Donjon deck (automatic at turn start).
+        /// </summary>
         OPEN_DOOR,
+
+        /// <summary>
+        /// Per §7.2: Play a monster from hand if no combat occurred.
+        /// </summary>
         LOOK_FOR_TROUBLE,
+
+        /// <summary>
+        /// Per §7.3: Draw face-down Donjon card if no combat occurred.
+        /// </summary>
         LOOT_ROOM,
+
+        /// <summary>
+        /// Per §7.4: End turn after Charity phase.
+        /// </summary>
         END_TURN,
     }
 
     /// <summary>
-    /// Combat response options
+    /// Defines combat response options per §8.
     /// </summary>
     public enum CombatResponseType
     {
+        /// <summary>
+        /// Per §8.2: Accept an offer of alliance from another player.
+        /// </summary>
         ACCEPT_ALLIANCE,
+
+        /// <summary>
+        /// Per §8.2: Decline an offer of alliance.
+        /// </summary>
         DECLINE_ALLIANCE,
+
+        /// <summary>
+        /// Per §8.6: Attempt to flee from combat.
+        /// </summary>
         FLEE,
+
+        /// <summary>
+        /// Per §8.2: Play a card during combat interaction window.
+        /// </summary>
         PLAY_CARD,
     }
 
     /// <summary>
-    /// Negotiation actions
+    /// Defines negotiation action types for alliance offers.
     /// </summary>
+    /// <remarks>
+    /// Per §8.2: Players negotiate treasure split before alliance is confirmed.
+    /// </remarks>
     public enum NegotiationActionType
     {
+        /// <summary>
+        /// Initial offer to help in combat.
+        /// </summary>
         OFFER,
+
+        /// <summary>
+        /// Accept the proposed terms.
+        /// </summary>
         ACCEPT,
+
+        /// <summary>
+        /// Reject the proposed terms.
+        /// </summary>
         REJECT,
+
+        /// <summary>
+        /// Counter with modified terms.
+        /// </summary>
         COUNTER_OFFER,
     }
 
     /// <summary>
-    /// Class abilities
+    /// Defines class abilities that can be activated per §5.2.
     /// </summary>
     public enum AbilityType
     {
+        /// <summary>
+        /// Per §12.3: Thief attempts to steal an item from another player.
+        /// </summary>
         THIEF_STEAL,
+
+        /// <summary>
+        /// Per §5.2: Warrior discards cards for +1 bonus each (max 3).
+        /// </summary>
         WARRIOR_DISCARD,
+
+        /// <summary>
+        /// Per §5.2: Mage discards cards for charm effects.
+        /// </summary>
         MAGE_CHARM,
+
+        /// <summary>
+        /// Per §5.2 and §11: Cleric discards hand to resurrect a dead player.
+        /// </summary>
         CLERIC_RESURRECT,
     }
 
     /// <summary>
-    /// Turn phases from game rules §7
+    /// Defines turn phases per §7.
     /// </summary>
+    /// <remarks>
+    /// Per §7 and §16: Ordered phases that make up a player's turn.
+    /// </remarks>
     public enum TurnPhase
     {
+        /// <summary>
+        /// Per §7.1: Open top Donjon card face-up.
+        /// </summary>
         OPEN_DOOR,
+
+        /// <summary>
+        /// Per §7.2: Optionally play monster from hand.
+        /// </summary>
         LOOK_FOR_TROUBLE,
+
+        /// <summary>
+        /// Per §7.3: Draw face-down Donjon card.
+        /// </summary>
         LOOT_ROOM,
+
+        /// <summary>
+        /// Per §7.4: Give away excess cards (hand limit 5).
+        /// </summary>
         CHARITY,
+
+        /// <summary>
+        /// End of turn, transitions to next player.
+        /// </summary>
         TURN_END,
     }
 
     /// <summary>
-    /// Combat results
+    /// Defines combat resolution results.
     /// </summary>
     public enum CombatResult
     {
+        /// <summary>
+        /// Per §8.5: Player force > monster force.
+        /// </summary>
         VICTORY,
+
+        /// <summary>
+        /// Per §8.4: Player force ≤ monster force, must flee or accept punishment.
+        /// </summary>
         DEFEAT,
     }
 
     /// <summary>
-    /// Error codes
+    /// Defines error codes for server error responses.
     /// </summary>
     public enum ErrorCode
     {
+        /// <summary>
+        /// The requested action is invalid.
+        /// </summary>
         INVALID_ACTION,
+
+        /// <summary>
+        /// Action attempted when not the player's turn.
+        /// </summary>
         NOT_YOUR_TURN,
+
+        /// <summary>
+        /// Action not valid in current game phase.
+        /// </summary>
         INVALID_PHASE,
+
+        /// <summary>
+        /// Network communication error.
+        /// </summary>
         NETWORK_ERROR,
     }
 
     // ============== DATA STRUCTURES ==============
 
     /// <summary>
-    /// Base message structure
+    /// Base structure for WebSocket messages.
     /// </summary>
     public class WebSocketMessage
     {
+        /// <summary>
+        /// Gets or sets the message type identifier.
+        /// </summary>
         public string Type { get; set; }
+
+        /// <summary>
+        /// Gets or sets the message data payload.
+        /// </summary>
         public Godot.Collections.Dictionary Data { get; set; }
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="WebSocketMessage"/> class.
+        /// </summary>
+        /// <param name="type">The message type.</param>
+        /// <param name="data">The message data.</param>
         public WebSocketMessage(string type, Godot.Collections.Dictionary data)
         {
             Type = type;
             Data = data;
         }
 
+        /// <summary>
+        /// Converts the message to JSON format for transmission.
+        /// </summary>
+        /// <returns>The JSON string representation.</returns>
         public string ToJson()
         {
             var message = new Godot.Collections.Dictionary { ["type"] = Type, ["data"] = Data };
@@ -131,24 +307,16 @@ public static class MessageProtocol
 
     // ============== CLIENT MESSAGE BUILDERS ==============
 
-    /// <summary>
-    /// Create JOIN_GAME message
-    /// </summary>
-    public static WebSocketMessage CreateJoinGame(string playerId, string token = null)
-    {
-        var data = new Godot.Collections.Dictionary { ["player_id"] = playerId };
-
-        if (!string.IsNullOrEmpty(token))
-        {
-            data["token"] = token;
-        }
-
-        return new WebSocketMessage(JOIN_GAME, data);
-    }
+    // Note: CreateJoinGame removed - player joining is implicit via WebSocket connection + JWT
 
     /// <summary>
-    /// Create PLAYER_ACTION message
+    /// Creates a PLAYER_ACTION message.
     /// </summary>
+    /// <param name="action">The action type to perform.</param>
+    /// <returns>A new WebSocketMessage ready for transmission.</returns>
+    /// <remarks>
+    /// Per §7: Sent when player chooses an action during their turn.
+    /// </remarks>
     public static WebSocketMessage CreatePlayerAction(PlayerActionType action)
     {
         var data = new Godot.Collections.Dictionary
@@ -161,8 +329,15 @@ public static class MessageProtocol
     }
 
     /// <summary>
-    /// Create PLAY_CARD message
+    /// Creates a PLAY_CARD message.
     /// </summary>
+    /// <param name="cardId">The unique identifier of the card to play.</param>
+    /// <param name="targetPlayerId">Optional target player ID for targeted cards.</param>
+    /// <param name="additionalData">Optional additional parameters.</param>
+    /// <returns>A new WebSocketMessage ready for transmission.</returns>
+    /// <remarks>
+    /// Per §4.4: Cards can be played from hand according to their MomentJeu restriction.
+    /// </remarks>
     public static WebSocketMessage CreatePlayCard(
         string cardId,
         string targetPlayerId = null,
@@ -185,8 +360,15 @@ public static class MessageProtocol
     }
 
     /// <summary>
-    /// Create COMBAT_RESPONSE message
+    /// Creates a COMBAT_RESPONSE message.
     /// </summary>
+    /// <param name="response">The combat response type.</param>
+    /// <param name="cardId">Optional card ID if playing a card.</param>
+    /// <param name="negotiationTerms">Optional negotiation terms for alliance offers.</param>
+    /// <returns>A new WebSocketMessage ready for transmission.</returns>
+    /// <remarks>
+    /// Per §8.2 and §8.6: Used to respond during combat interaction window or flee attempts.
+    /// </remarks>
     public static WebSocketMessage CreateCombatResponse(
         CombatResponseType response,
         string cardId = null,
@@ -209,8 +391,15 @@ public static class MessageProtocol
     }
 
     /// <summary>
-    /// Create NEGOTIATION message
+    /// Creates a NEGOTIATION message.
     /// </summary>
+    /// <param name="action">The negotiation action type.</param>
+    /// <param name="negotiationId">The unique negotiation identifier.</param>
+    /// <param name="terms">The negotiation terms.</param>
+    /// <returns>A new WebSocketMessage ready for transmission.</returns>
+    /// <remarks>
+    /// Per §8.2: Used to negotiate alliance terms before combat resolution.
+    /// </remarks>
     public static WebSocketMessage CreateNegotiation(
         NegotiationActionType action,
         string negotiationId,
@@ -228,8 +417,15 @@ public static class MessageProtocol
     }
 
     /// <summary>
-    /// Create USE_ABILITY message
+    /// Creates a USE_ABILITY message.
     /// </summary>
+    /// <param name="ability">The class ability to use.</param>
+    /// <param name="targetPlayerId">Optional target for targeted abilities.</param>
+    /// <param name="cardIds">Optional card IDs for abilities requiring discards.</param>
+    /// <returns>A new WebSocketMessage ready for transmission.</returns>
+    /// <remarks>
+    /// Per §5.2: Activates class-specific abilities like Thief steal or Warrior discard.
+    /// </remarks>
     public static WebSocketMessage CreateUseAbility(
         AbilityType ability,
         string targetPlayerId = null,
@@ -259,8 +455,12 @@ public static class MessageProtocol
     // ============== SERVER MESSAGE PARSERS ==============
 
     /// <summary>
-    /// Parse incoming message
+    /// Parses a JSON message into type and data components.
     /// </summary>
+    /// <param name="json">The JSON string to parse.</param>
+    /// <param name="messageType">Output parameter for the message type.</param>
+    /// <param name="data">Output parameter for the message data.</param>
+    /// <returns>True if parsing succeeded; false otherwise.</returns>
     public static bool TryParseMessage(
         string json,
         out string messageType,
@@ -304,8 +504,15 @@ public static class MessageProtocol
     }
 
     /// <summary>
-    /// Parse GAME_STATE message
+    /// Parses a GAME_STATE message from server data.
     /// </summary>
+    /// <param name="data">The message data dictionary.</param>
+    /// <param name="gameState">Output parameter for parsed game state.</param>
+    /// <returns>True if parsing succeeded; false otherwise.</returns>
+    /// <remarks>
+    /// Per §16: GAME_STATE contains complete snapshot of game including players,
+    /// current turn, combat state, and deck information.
+    /// </remarks>
     public static bool TryParseGameState(
         Godot.Collections.Dictionary data,
         out GameStateMessage gameState
@@ -335,8 +542,14 @@ public static class MessageProtocol
     }
 
     /// <summary>
-    /// Parse TURN_PHASE_CHANGE message
+    /// Parses a TURN_PHASE_CHANGE message from server data.
     /// </summary>
+    /// <param name="data">The message data dictionary.</param>
+    /// <param name="phaseChange">Output parameter for parsed phase change.</param>
+    /// <returns>True if parsing succeeded; false otherwise.</returns>
+    /// <remarks>
+    /// Per §7: Sent when turn phase changes to notify clients of phase transitions.
+    /// </remarks>
     public static bool TryParseTurnPhaseChange(
         Godot.Collections.Dictionary data,
         out TurnPhaseChangeMessage phaseChange
@@ -365,8 +578,14 @@ public static class MessageProtocol
     }
 
     /// <summary>
-    /// Parse COMBAT_START message
+    /// Parses a COMBAT_START message from server data.
     /// </summary>
+    /// <param name="data">The message data dictionary.</param>
+    /// <param name="combatStart">Output parameter for parsed combat start info.</param>
+    /// <returns>True if parsing succeeded; false otherwise.</returns>
+    /// <remarks>
+    /// Per §8: Sent when combat begins with monster info and player initial force.
+    /// </remarks>
     public static bool TryParseCombatStart(
         Godot.Collections.Dictionary data,
         out CombatStartMessage combatStart
@@ -399,8 +618,11 @@ public static class MessageProtocol
     }
 
     /// <summary>
-    /// Parse ERROR message
+    /// Parses an ERROR message from server data.
     /// </summary>
+    /// <param name="data">The message data dictionary.</param>
+    /// <param name="error">Output parameter for parsed error.</param>
+    /// <returns>True if parsing succeeded; false otherwise.</returns>
     public static bool TryParseError(Godot.Collections.Dictionary data, out ErrorMessage error)
     {
         error = null;
@@ -428,6 +650,11 @@ public static class MessageProtocol
 
     // ============== HELPER METHODS ==============
 
+    /// <summary>
+    /// Parses players array from game state data.
+    /// </summary>
+    /// <param name="data">The game state dictionary.</param>
+    /// <returns>The players array or empty array if not found.</returns>
     private static Godot.Collections.Array ParsePlayers(Godot.Collections.Dictionary data)
     {
         if (!data.ContainsKey("players"))
@@ -436,6 +663,11 @@ public static class MessageProtocol
         return data["players"].AsGodotArray();
     }
 
+    /// <summary>
+    /// Parses current turn info from game state data.
+    /// </summary>
+    /// <param name="data">The game state dictionary.</param>
+    /// <returns>The current turn dictionary or empty dictionary if not found.</returns>
     private static Godot.Collections.Dictionary ParseCurrentTurn(Godot.Collections.Dictionary data)
     {
         if (!data.ContainsKey("current_turn"))
@@ -444,6 +676,11 @@ public static class MessageProtocol
         return data["current_turn"].AsGodotDictionary();
     }
 
+    /// <summary>
+    /// Parses combat info from game state data.
+    /// </summary>
+    /// <param name="data">The game state dictionary.</param>
+    /// <returns>The combat dictionary or null if not in combat.</returns>
     private static Godot.Collections.Dictionary ParseCombat(Godot.Collections.Dictionary data)
     {
         if (!data.ContainsKey("combat"))
@@ -456,6 +693,11 @@ public static class MessageProtocol
         return combat.AsGodotDictionary();
     }
 
+    /// <summary>
+    /// Parses deck info from game state data.
+    /// </summary>
+    /// <param name="data">The game state dictionary.</param>
+    /// <returns>The decks dictionary or empty dictionary if not found.</returns>
     private static Godot.Collections.Dictionary ParseDecks(Godot.Collections.Dictionary data)
     {
         if (!data.ContainsKey("decks"))
@@ -466,48 +708,121 @@ public static class MessageProtocol
 
     // ============== MESSAGE DATA CLASSES ==============
 
+    /// <summary>
+    /// Contains complete game state information from server.
+    /// </summary>
     public class GameStateMessage
     {
+        /// <summary>
+        /// Gets or sets the game session identifier.
+        /// </summary>
         public string GameId { get; set; }
+
+        /// <summary>
+        /// Gets or sets the array of player data.
+        /// </summary>
         public Godot.Collections.Array Players { get; set; }
+
+        /// <summary>
+        /// Gets or sets current turn information.
+        /// </summary>
         public Godot.Collections.Dictionary CurrentTurn { get; set; }
+
+        /// <summary>
+        /// Gets or sets combat state, or null if not in combat.
+        /// </summary>
         public Godot.Collections.Dictionary Combat { get; set; }
+
+        /// <summary>
+        /// Gets or sets deck information.
+        /// </summary>
         public Godot.Collections.Dictionary Decks { get; set; }
+
+        /// <summary>
+        /// Gets or sets winner player ID if game is over.
+        /// </summary>
         public string Winner { get; set; }
     }
 
+    /// <summary>
+    /// Contains turn phase change information.
+    /// </summary>
     public class TurnPhaseChangeMessage
     {
+        /// <summary>
+        /// Gets or sets the active player ID.
+        /// </summary>
         public string PlayerId { get; set; }
+
+        /// <summary>
+        /// Gets or sets the new phase string.
+        /// </summary>
         public string Phase { get; set; }
+
+        /// <summary>
+        /// Gets or sets result data from previous phase.
+        /// </summary>
         public Godot.Collections.Dictionary Result { get; set; }
     }
 
+    /// <summary>
+    /// Contains combat start information.
+    /// </summary>
     public class CombatStartMessage
     {
+        /// <summary>
+        /// Gets or sets the monster data.
+        /// </summary>
         public Godot.Collections.Dictionary Monster { get; set; }
+
+        /// <summary>
+        /// Gets or sets the player's initial combat force.
+        /// </summary>
         public int PlayerForce { get; set; }
+
+        /// <summary>
+        /// Gets or sets the interaction window duration in seconds.
+        /// </summary>
         public int InteractionWindowDuration { get; set; }
     }
 
+    /// <summary>
+    /// Contains error information.
+    /// </summary>
     public class ErrorMessage
     {
+        /// <summary>
+        /// Gets or sets the error code.
+        /// </summary>
         public string Code { get; set; }
+
+        /// <summary>
+        /// Gets or sets the human-readable error message.
+        /// </summary>
         public string Message { get; set; }
+
+        /// <summary>
+        /// Gets or sets whether the error is recoverable.
+        /// </summary>
         public bool Recoverable { get; set; }
+
+        /// <summary>
+        /// Gets or sets the suggested action to recover.
+        /// </summary>
         public string SuggestedAction { get; set; }
     }
 
     // ============== UTILITY METHODS ==============
 
     /// <summary>
-    /// Get human-readable description of message type
+    /// Gets a human-readable description of a message type.
     /// </summary>
+    /// <param name="messageType">The message type constant.</param>
+    /// <returns>A descriptive string.</returns>
     public static string GetMessageDescription(string messageType)
     {
         return messageType switch
         {
-            JOIN_GAME => "Client joins the game",
             PLAYER_ACTION => "Player takes action during turn",
             PLAY_CARD => "Player plays a card",
             COMBAT_RESPONSE => "Response to combat interaction",
@@ -525,12 +840,13 @@ public static class MessageProtocol
     }
 
     /// <summary>
-    /// Validate if a message type is a client message
+    /// Determines if a message type is a client-to-server message.
     /// </summary>
+    /// <param name="messageType">The message type to check.</param>
+    /// <returns>True if it's a client message; false otherwise.</returns>
     public static bool IsClientMessage(string messageType)
     {
-        return messageType == JOIN_GAME
-            || messageType == PLAYER_ACTION
+        return messageType == PLAYER_ACTION
             || messageType == PLAY_CARD
             || messageType == COMBAT_RESPONSE
             || messageType == NEGOTIATION
@@ -538,8 +854,10 @@ public static class MessageProtocol
     }
 
     /// <summary>
-    /// Validate if a message type is a server message
+    /// Determines if a message type is a server-to-client message.
     /// </summary>
+    /// <param name="messageType">The message type to check.</param>
+    /// <returns>True if it's a server message; false otherwise.</returns>
     public static bool IsServerMessage(string messageType)
     {
         return messageType == GAME_STATE
@@ -551,130 +869,29 @@ public static class MessageProtocol
             || messageType == ERROR;
     }
 
-    // ============== CARD DATA STRUCTURES ==============
+    // ============== CARD REFERENCE NOTES ==============
+
+    // Cards are referenced by unique card_id string in all network messages.
+    // Full card data (stats, effects, etc.) is NOT transmitted over the network.
+    // Both client and server maintain their own card database loaded from local files.
+    // Example card IDs: "monster_goblin_001", "item_broad_sword_001", "race_elf_001"
 
     /// <summary>
-    /// Card data for network transmission
-    /// Based on PROTOCOL.md §Data Types Reference
+    /// Looks up card data by ID using local CardFactory.
     /// </summary>
-    public class NetworkCardData
+    /// <param name="cardId">The unique card identifier.</param>
+    /// <returns>The CardData if found; null otherwise.</returns>
+    /// <remarks>
+    /// Per AGENTS.md architecture: Cards are referenced by ID in network messages.
+    /// Full card definitions should be loaded from Resources/Cards/Definitions/ at startup.
+    /// </remarks>
+    public static CardData GetCardById(string cardId)
     {
-        public string Id { get; set; }
-        public string Name { get; set; }
-        public string Description { get; set; }
-        public string DeckType { get; set; } // "DUNGEON" or "TREASURE"
-        public string Type { get; set; } // "MONSTER", "ITEM", etc.
-
-        // Monster-specific
-        public int? Level { get; set; }
-        public int? Treasures { get; set; }
-        public int? LevelsGained { get; set; }
-
-        // Item-specific
-        public int? Bonus { get; set; }
-        public int? GoldValue { get; set; }
-        public string? Slot { get; set; }
-
-        // Common properties as dictionaries for flexibility
-        public Godot.Collections.Dictionary AdditionalProperties { get; set; } = new();
-    }
-
-    /// <summary>
-    /// Convert CardData to network format
-    /// </summary>
-    public static NetworkCardData ToNetworkFormat(CardData cardData)
-    {
-        var networkCard = new NetworkCardData
-        {
-            Id = cardData.Id,
-            Name = cardData.Name,
-            Description = cardData.Description,
-            DeckType = cardData.DType.ToString().ToUpper(),
-            Type = cardData.Type.ToString().ToUpper(),
-        };
-
-        // Handle specific card types
-        switch (cardData)
-        {
-            case MonsterCardData monster:
-                networkCard.Level = monster.Level;
-                networkCard.Treasures = monster.Treasures;
-                networkCard.LevelsGained = monster.LevelsGained;
-                networkCard.AdditionalProperties["flee_penalty"] = monster.FleePenalty.ToString();
-                networkCard.AdditionalProperties["flee_modifier"] = monster.FleeModifier;
-                if (monster.BonusAgainstRace != RaceType.None)
-                    networkCard.AdditionalProperties["bonus_against_race"] = monster
-                        .BonusAgainstRace.ToString()
-                        .ToUpper();
-                if (monster.BonusAgainstClass != ClassType.None)
-                    networkCard.AdditionalProperties["bonus_against_class"] = monster
-                        .BonusAgainstClass.ToString()
-                        .ToUpper();
-                if (monster.BonusValue != 0)
-                    networkCard.AdditionalProperties["bonus_value"] = monster.BonusValue;
-                break;
-
-            case ItemCardData item:
-                networkCard.Bonus = item.Bonus;
-                networkCard.GoldValue = item.GoldValue;
-                networkCard.Slot = item.Slot.ToString().ToUpper();
-                networkCard.AdditionalProperties["size"] = item.Size.ToString().ToUpper();
-                networkCard.AdditionalProperties["hands_required"] = item.HandsRequired;
-                if (item.RaceRestriction != RaceType.None)
-                    networkCard.AdditionalProperties["race_restriction"] = item
-                        .RaceRestriction.ToString()
-                        .ToUpper();
-                if (item.ClassRestriction != ClassType.None)
-                    networkCard.AdditionalProperties["class_restriction"] = item
-                        .ClassRestriction.ToString()
-                        .ToUpper();
-                if (item.SexRestriction != SexType.None)
-                    networkCard.AdditionalProperties["sex_restriction"] = item
-                        .SexRestriction.ToString()
-                        .ToUpper();
-                break;
-
-            case RaceCardData race:
-                networkCard.AdditionalProperties["race"] = race.Race.ToString().ToUpper();
-                if (race.Abilities != null && race.Abilities.Length > 0)
-                    networkCard.AdditionalProperties["abilities"] = race.Abilities;
-                break;
-
-            case ClassCardData @class:
-                networkCard.AdditionalProperties["class"] = @class.Class.ToString().ToUpper();
-                if (@class.Abilities != null && @class.Abilities.Length > 0)
-                    networkCard.AdditionalProperties["abilities"] = @class.Abilities;
-                break;
-
-            case ActionCardData action:
-                networkCard.AdditionalProperties["playable_when"] = action
-                    .PlayableWhen.ToString()
-                    .ToUpper();
-                networkCard.AdditionalProperties["effect"] = action.Effect;
-                break;
-
-            case CurseCardData curse:
-                networkCard.AdditionalProperties["effect"] = curse.Effect.ToString().ToUpper();
-                break;
-        }
-
-        return networkCard;
-    }
-
-    /// <summary>
-    /// Parse card data from network message
-    /// This is a simplified version - in practice, server sends card IDs and client loads from local DB
-    /// </summary>
-    public static CardData ParseCardFromNetwork(Godot.Collections.Dictionary networkData)
-    {
-        if (!networkData.ContainsKey("id"))
+        if (string.IsNullOrEmpty(cardId))
             return null;
 
-        string cardId = (string)networkData["id"];
-
-        // In the actual implementation, we would look up the card in CardFactory
-        // For now, return null - client should have card data loaded locally
-        GD.Print($"[MessageProtocol] Received card reference: {cardId}");
-        return null;
+        // CardFactory should be initialized and loaded with all card definitions
+        // This is the preferred way to get card data - never send full card data over network
+        return CardFactory.GetCard(cardId);
     }
 }

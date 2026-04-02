@@ -2,26 +2,56 @@ using System.Linq;
 using Godot;
 
 /// <summary>
-/// Handles 3D drag-and-drop for card visuals
-/// Simple screen-space dragging implementation
+/// Handles 3D drag-and-drop interactions for card visuals.
+/// Implements screen-space dragging with raycast-based drop zone detection.
 /// </summary>
+/// <remarks>
+/// Per AGENTS.md discoveries: Z is vertical in this coordinate system.
+/// Drop zone Area3D nodes have thin CollisionShape3D (Z height 0.1 units).
+/// Raycast must start above shapes to detect properly.
+/// </remarks>
 public partial class DragDropHandler : Node3D
 {
+    /// <summary>
+    /// Emitted when dragging starts.
+    /// </summary>
+    /// <param name="draggable">The Node3D being dragged.</param>
     [Signal]
     public delegate void DragStartedEventHandler(Node3D draggable);
 
+    /// <summary>
+    /// Emitted when dragging ends.
+    /// </summary>
+    /// <param name="draggable">The Node3D that was dragged.</param>
+    /// <param name="position">The final position where dragging ended.</param>
     [Signal]
     public delegate void DragEndedEventHandler(Node3D draggable, Vector3 position);
 
+    /// <summary>
+    /// Emitted when card is dropped on a valid equipment slot.
+    /// </summary>
+    /// <param name="draggable">The Node3D that was dropped.</param>
+    /// <param name="slot">The EquipmentSlot value where dropped.</param>
     [Signal]
     public delegate void DroppedOnSlotEventHandler(Node3D draggable, int slot);
 
+    /// <summary>
+    /// Gets or sets whether this card can be dragged.
+    /// </summary>
     [Export]
     public bool IsDraggable { get; set; } = true;
 
+    /// <summary>
+    /// Gets or sets the height above the table while dragging.
+    /// </summary>
+    /// <value>Default is 0.5 units in Z (vertical).</value>
     [Export]
     public float DragHeight { get; set; } = .5f;
 
+    /// <summary>
+    /// Gets or sets the animation speed for returning to original position.
+    /// </summary>
+    /// <value>Higher values mean faster return animation.</value>
     [Export]
     public float ReturnSpeed { get; set; } = 10.0f;
 
@@ -32,6 +62,13 @@ public partial class DragDropHandler : Node3D
     private string _cardId = string.Empty;
     private ItemCardData _itemData = null;
 
+    /// <summary>
+    /// Initializes the drag drop handler and creates raycast for drop detection.
+    /// </summary>
+    /// <remarks>
+    /// Attempts to find card data from parent CardVisual if available.
+    /// Creates RayCast3D configured for drop zone detection (layer 2).
+    /// </remarks>
     public override void _Ready()
     {
         // Try to find card data if parent is CardVisual
@@ -53,6 +90,14 @@ public partial class DragDropHandler : Node3D
         AddChild(_rayCast);
     }
 
+    /// <summary>
+    /// Handles input events for drag detection.
+    /// </summary>
+    /// <param name="@event">The input event.</param>
+    /// <remarks>
+    /// Processes mouse button and motion events to manage drag state.
+    /// Only processes input when IsDraggable is true and mouse is over the card.
+    /// </remarks>
     public override void _Input(InputEvent @event)
     {
         if (!IsDraggable)
@@ -88,6 +133,15 @@ public partial class DragDropHandler : Node3D
         }
     }
 
+    /// <summary>
+    /// Checks if mouse is over this card's collider.
+    /// </summary>
+    /// <param name="mousePosition">Current mouse position in screen coordinates.</param>
+    /// <param name="camera">The active camera.</param>
+    /// <returns>True if mouse is over this card; false otherwise.</returns>
+    /// <remarks>
+    /// Uses physics raycast to detect collision with this card's geometry.
+    /// </remarks>
     private bool IsMouseOverObject(Vector2 mousePosition, Camera3D camera)
     {
         var spaceState = GetWorld3D().DirectSpaceState;
@@ -123,6 +177,15 @@ public partial class DragDropHandler : Node3D
         return false;
     }
 
+    /// <summary>
+    /// Starts dragging the card.
+    /// </summary>
+    /// <param name="mousePosition">Current mouse position.</param>
+    /// <param name="camera">The active camera.</param>
+    /// <remarks>
+    /// Stores original position, raises card to DragHeight, and enables drop detection raycast.
+    /// Emits DragStarted signal.
+    /// </remarks>
     private void StartDrag(Vector2 mousePosition, Camera3D camera)
     {
         var parentNode = GetParent() as Node3D;
@@ -168,6 +231,15 @@ public partial class DragDropHandler : Node3D
         EmitSignal(SignalName.DragStarted, this);
     }
 
+    /// <summary>
+    /// Updates the dragged card's position during mouse movement.
+    /// </summary>
+    /// <param name="mousePosition">Current mouse position.</param>
+    /// <param name="camera">The active camera.</param>
+    /// <remarks>
+    /// Converts screen-space mouse delta to world-space movement using camera basis vectors.
+    /// Updates raycast position for drop zone detection.
+    /// </remarks>
     private void UpdateDragPosition(Vector2 mousePosition, Camera3D camera)
     {
         if (!_isDragging)
@@ -207,6 +279,15 @@ public partial class DragDropHandler : Node3D
         _rayCast.ForceRaycastUpdate();
     }
 
+    /// <summary>
+    /// Ends dragging and determines if a valid drop occurred.
+    /// </summary>
+    /// <param name="mousePosition">Final mouse position.</param>
+    /// <param name="camera">The active camera.</param>
+    /// <remarks>
+    /// Uses raycast to detect drop zone. If valid, emits DroppedOnSlot signal.
+    /// Otherwise, animates card back to original position.
+    /// </remarks>
     private void EndDrag(Vector2 mousePosition, Camera3D camera)
     {
         if (!_isDragging)
@@ -359,6 +440,15 @@ public partial class DragDropHandler : Node3D
         EmitSignal(SignalName.DragEnded, this, parent?.GlobalPosition ?? GlobalPosition);
     }
 
+    /// <summary>
+    /// Validates whether an item can be dropped in the specified slot.
+    /// </summary>
+    /// <param name="slot">The target equipment slot.</param>
+    /// <returns>True if the drop is valid; false otherwise.</returns>
+    /// <remarks>
+    /// Per §9: Validates slot compatibility including hand requirements and item slot restrictions.
+    /// All items can be dropped in carried zone (EquipmentSlot.None).
+    /// </remarks>
     private bool ValidateDrop(EquipmentSlot slot)
     {
         if (_itemData == null)
@@ -417,6 +507,12 @@ public partial class DragDropHandler : Node3D
         }
     }
 
+    /// <summary>
+    /// Animates the card back to its original position.
+    /// </summary>
+    /// <remarks>
+    /// Called when drop is invalid. Uses Lerp for smooth animation.
+    /// </remarks>
     private async void ReturnToOriginalPosition()
     {
         float t = 0;
@@ -436,6 +532,13 @@ public partial class DragDropHandler : Node3D
         parent.GlobalPosition = _originalPosition;
     }
 
+    /// <summary>
+    /// Animates the card to a target position.
+    /// </summary>
+    /// <param name="targetPosition">The destination position.</param>
+    /// <remarks>
+    /// Called when drop is valid. Uses Lerp for smooth placement animation.
+    /// </remarks>
     private async void MoveToPosition(Vector3 targetPosition)
     {
         float t = 0;
@@ -455,12 +558,25 @@ public partial class DragDropHandler : Node3D
         parent.GlobalPosition = targetPosition;
     }
 
+    /// <summary>
+    /// Sets the card data for this drag handler.
+    /// </summary>
+    /// <param name="cardId">The unique card identifier.</param>
+    /// <param name="itemData">The item card data.</param>
     public void SetCardData(string cardId, ItemCardData itemData)
     {
         _cardId = cardId;
         _itemData = itemData;
     }
 
+    /// <summary>
+    /// Recursively finds all Area3D nodes in the scene.
+    /// </summary>
+    /// <param name="node">The starting node.</param>
+    /// <param name="areas">List to collect found areas.</param>
+    /// <remarks>
+    /// Used for debugging drop zone detection issues.
+    /// </remarks>
     private void FindAllAreas(Node node, System.Collections.Generic.List<Area3D> areas)
     {
         if (node is Area3D area)

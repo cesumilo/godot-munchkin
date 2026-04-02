@@ -5,10 +5,22 @@ using System.Threading;
 using System.Threading.Tasks;
 using Godot;
 
+/// <summary>
+/// Manages WebSocket connection to the game server for real-time communication.
+/// Handles connection lifecycle, message sending/receiving, and reconnection logic.
+/// </summary>
+/// <remarks>
+/// Per AGENTS.md architecture: Uses Godot's WebSocketPeer for custom WebSocket implementation.
+/// Not using Godot's built-in MultiplayerAPI. Connection includes JWT token for authentication.
+/// </remarks>
 public partial class WebSocketClient : Node
 {
     // Singleton instance
     private static WebSocketClient _instance;
+
+    /// <summary>
+    /// Gets the singleton instance of WebSocketClient.
+    /// </summary>
     public static WebSocketClient Instance => _instance;
 
     // Connection state
@@ -23,15 +35,41 @@ public partial class WebSocketClient : Node
     private const float RECONNECT_INTERVAL = 5f; // seconds
 
     // Event delegates
+    /// <summary>
+    /// Delegate for connection state change events.
+    /// </summary>
+    /// <param name="connected">True if now connected; false if disconnected.</param>
     public delegate void ConnectionStateChangedHandler(bool connected);
+
+    /// <summary>
+    /// Delegate for received message events.
+    /// </summary>
+    /// <param name="messageType">The type of message received.</param>
+    /// <param name="data">The message data dictionary.</param>
     public delegate void MessageReceivedHandler(
         string messageType,
         Godot.Collections.Dictionary data
     );
+
+    /// <summary>
+    /// Delegate for error events.
+    /// </summary>
+    /// <param name="errorMessage">The error description.</param>
     public delegate void ErrorHandler(string errorMessage);
 
+    /// <summary>
+    /// Emitted when connection state changes.
+    /// </summary>
     public event ConnectionStateChangedHandler ConnectionStateChanged;
+
+    /// <summary>
+    /// Emitted when a message is received from the server.
+    /// </summary>
     public event MessageReceivedHandler MessageReceived;
+
+    /// <summary>
+    /// Emitted when an error occurs.
+    /// </summary>
     public event ErrorHandler ErrorOccurred;
 
     // Message queue for outgoing messages
@@ -39,13 +77,27 @@ public partial class WebSocketClient : Node
     private bool _isProcessingQueue = false;
 
     // Connection statistics
+    /// <summary>
+    /// Gets the number of messages sent since connection.
+    /// </summary>
     public int MessagesSent { get; private set; } = 0;
+
+    /// <summary>
+    /// Gets the number of messages received since connection.
+    /// </summary>
     public int MessagesReceived { get; private set; } = 0;
+
+    /// <summary>
+    /// Gets the timestamp of last successful connection.
+    /// </summary>
     public DateTime LastConnectionTime { get; private set; }
 
     /// <summary>
-    /// Initialize the WebSocket client
+    /// Initializes the WebSocketClient singleton and sets process mode.
     /// </summary>
+    /// <remarks>
+    /// Uses ProcessModeEnum.Always to continue processing even when game is paused.
+    /// </remarks>
     public override void _Ready()
     {
         if (_instance != null && _instance != this)
@@ -61,8 +113,12 @@ public partial class WebSocketClient : Node
     }
 
     /// <summary>
-    /// Process WebSocket connection each frame
+    /// Polls WebSocket connection and handles messages each frame.
     /// </summary>
+    /// <param name="delta">Elapsed time since last frame in seconds.</param>
+    /// <remarks>
+    /// Per Godot 4.6 API: WebSocketPeer requires polling in _Process, not event-driven.
+    /// </remarks>
     public override void _Process(double delta)
     {
         if (_webSocketPeer == null)
@@ -173,10 +229,13 @@ public partial class WebSocketClient : Node
     }
 
     /// <summary>
-    /// Connect to a WebSocket server
+    /// Initiates connection to a WebSocket server.
     /// </summary>
-    /// <param name="url">WebSocket URL (e.g., ws://server:port/lobby/id/ws)</param>
-    /// <returns>True if connection attempt started successfully</returns>
+    /// <param name="url">The WebSocket URL (e.g., ws://server:port/lobby/id/ws).</param>
+    /// <returns>True if connection attempt started successfully; false otherwise.</returns>
+    /// <remarks>
+    /// Per AGENTS.md: URL should include JWT token as query parameter for authentication.
+    /// </remarks>
     public bool ConnectToServer(string url)
     {
         GD.Print($"[WebSocketClient] ConnectToServer called with URL: {url}");
@@ -232,7 +291,7 @@ public partial class WebSocketClient : Node
     }
 
     /// <summary>
-    /// Disconnect from the server
+    /// Disconnects from the server and cleans up resources.
     /// </summary>
     public void Disconnect()
     {
@@ -250,8 +309,11 @@ public partial class WebSocketClient : Node
     }
 
     /// <summary>
-    /// Reset connection state (useful for reconnection attempts)
+    /// Resets connection state flags without disconnecting.
     /// </summary>
+    /// <remarks>
+    /// Useful for clearing stale connection state before reconnection attempts.
+    /// </remarks>
     public void ResetConnectionState()
     {
         _isConnecting = false;
@@ -259,11 +321,11 @@ public partial class WebSocketClient : Node
     }
 
     /// <summary>
-    /// Send a message to the server
+    /// Sends a message to the server.
     /// </summary>
-    /// <param name="message">JSON message string</param>
-    /// <param name="queueIfDisconnected">Queue message if not connected</param>
-    /// <returns>True if message sent or queued successfully</returns>
+    /// <param name="message">The JSON message string to send.</param>
+    /// <param name="queueIfDisconnected">If true, queues message for later if not connected.</param>
+    /// <returns>True if message sent or queued successfully; false otherwise.</returns>
     public bool SendMessage(string message, bool queueIfDisconnected = true)
     {
         if (_isConnected && _webSocketPeer != null)
@@ -310,8 +372,11 @@ public partial class WebSocketClient : Node
     }
 
     /// <summary>
-    /// Send JOIN_GAME message with player ID after connection
+    /// Sends JOIN_GAME message with player ID after connection.
     /// </summary>
+    /// <remarks>
+    /// Automatically called after successful connection to identify the player.
+    /// </remarks>
     private void SendJoinGameMessage()
     {
         if (string.IsNullOrEmpty(Main.PlayerId))
@@ -325,8 +390,11 @@ public partial class WebSocketClient : Node
     }
 
     /// <summary>
-    /// Send a structured message (converts to JSON)
+    /// Sends a structured message with type and data.
     /// </summary>
+    /// <param name="messageType">The message type identifier.</param>
+    /// <param name="data">The message data dictionary.</param>
+    /// <returns>True if message sent successfully; false otherwise.</returns>
     public bool SendStructuredMessage(string messageType, Godot.Collections.Dictionary data)
     {
         try
@@ -350,8 +418,11 @@ public partial class WebSocketClient : Node
     }
 
     /// <summary>
-    /// Process queued messages
+    /// Processes queued outgoing messages.
     /// </summary>
+    /// <remarks>
+    /// Sends queued messages with a small delay between each to avoid flooding.
+    /// </remarks>
     private async void ProcessMessageQueue()
     {
         if (_isProcessingQueue || !_isConnected)
@@ -378,8 +449,12 @@ public partial class WebSocketClient : Node
     }
 
     /// <summary>
-    /// Handle incoming message from server
+    /// Parses and dispatches an incoming message.
     /// </summary>
+    /// <param name="message">The raw JSON message string.</param>
+    /// <remarks>
+    /// Parses message type and emits MessageReceived event with structured data.
+    /// </remarks>
     private void HandleIncomingMessage(string message)
     {
         try
@@ -425,8 +500,9 @@ public partial class WebSocketClient : Node
     }
 
     /// <summary>
-    /// Check if connected to server
+    /// Gets the current connection status.
     /// </summary>
+    /// <returns>True if connected and WebSocket is open; false otherwise.</returns>
     public bool IsConnected()
     {
         return _isConnected
@@ -435,16 +511,18 @@ public partial class WebSocketClient : Node
     }
 
     /// <summary>
-    /// Check if connecting to server
+    /// Gets whether a connection is currently being attempted.
     /// </summary>
+    /// <returns>True if connection is in progress; false otherwise.</returns>
     public bool IsConnecting()
     {
         return _isConnecting;
     }
 
     /// <summary>
-    /// Get connection statistics
+    /// Gets connection statistics.
     /// </summary>
+    /// <returns>Dictionary containing connection statistics.</returns>
     public Godot.Collections.Dictionary GetStatistics()
     {
         return new Godot.Collections.Dictionary
@@ -460,7 +538,7 @@ public partial class WebSocketClient : Node
     }
 
     /// <summary>
-    /// Clean up resources
+    /// Cleans up resources when exiting scene tree.
     /// </summary>
     public override void _ExitTree()
     {

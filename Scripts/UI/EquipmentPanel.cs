@@ -2,9 +2,13 @@ using System.Collections.Generic;
 using Godot;
 
 /// <summary>
-/// EquipmentPanel - Displays player's worn and carried equipment
-/// Uses Card3D plugin for 3D card visuals
+/// Displays a player's equipment in 3D space using Card3D visuals.
+/// Handles both worn equipment (in slots) and carried equipment.
 /// </summary>
+/// <remarks>
+/// Per §9: Shows equipped items in appropriate slots (Head, Armor, Feet, Hands).
+/// Carried items displayed separately. Per §9.4: Worn items show active bonuses.
+/// </remarks>
 public partial class EquipmentPanel : Node3D
 {
     // References to PlayerState
@@ -12,25 +16,46 @@ public partial class EquipmentPanel : Node3D
     private GameStateManager _gameStateManager;
 
     // Slot containers for 3D card placement
+    /// <summary>
+    /// Container node for head slot equipment.
+    /// </summary>
     [Export]
     private Node3D _headSlotContainer;
 
+    /// <summary>
+    /// Container node for armor slot equipment.
+    /// </summary>
     [Export]
     private Node3D _armorSlotContainer;
 
+    /// <summary>
+    /// Container node for feet slot equipment.
+    /// </summary>
     [Export]
     private Node3D _feetSlotContainer;
 
+    /// <summary>
+    /// Container node for first hand slot equipment.
+    /// </summary>
     [Export]
     private Node3D _hand1SlotContainer;
 
+    /// <summary>
+    /// Container node for second hand slot equipment.
+    /// </summary>
     [Export]
     private Node3D _hand2SlotContainer;
 
+    /// <summary>
+    /// Container node for carried (unequipped) equipment.
+    /// </summary>
     [Export]
     private Node3D _carriedEquipmentContainer;
 
     // CardVisual scene for instancing (uses existing CardVisual.cs)
+    /// <summary>
+    /// PackedScene for CardVisual instances.
+    /// </summary>
     [Export]
     private PackedScene _cardVisualScene;
 
@@ -41,30 +66,50 @@ public partial class EquipmentPanel : Node3D
     private Dictionary<EquipmentSlot, Node3D> _slotContainers = new();
 
     // UI labels
+    /// <summary>
+    /// Label displaying player name.
+    /// </summary>
     [Export]
     private Label3D _playerNameLabel;
 
+    /// <summary>
+    /// Label displaying player level.
+    /// </summary>
     [Export]
     private Label3D _playerLevelLabel;
 
+    /// <summary>
+    /// Label displaying total combat bonus.
+    /// </summary>
     [Export]
     private Label3D _totalBonusLabel;
 
+    /// <summary>
+    /// Label displaying player race(s).
+    /// </summary>
     [Export]
     private Label3D _raceLabel;
 
+    /// <summary>
+    /// Label displaying player class(es).
+    /// </summary>
     [Export]
     private Label3D _classLabel;
 
+    /// <summary>
+    /// Initializes slot containers and finds GameStateManager.
+    /// </summary>
     public override void _Ready()
     {
         InitializeSlotContainers();
         FindGameStateManager();
     }
 
+    /// <summary>
+    /// Maps equipment slots to their container nodes.
+    /// </summary>
     private void InitializeSlotContainers()
     {
-        // Map slot types to their container nodes
         _slotContainers[EquipmentSlot.Head] = _headSlotContainer;
         _slotContainers[EquipmentSlot.Armor] = _armorSlotContainer;
         _slotContainers[EquipmentSlot.Foot] = _feetSlotContainer;
@@ -72,6 +117,9 @@ public partial class EquipmentPanel : Node3D
         _slotContainers[EquipmentSlot.Hand2] = _hand2SlotContainer;
     }
 
+    /// <summary>
+    /// Finds and subscribes to GameStateManager for player updates.
+    /// </summary>
     private void FindGameStateManager()
     {
         _gameStateManager = GameStateManager.Instance;
@@ -81,24 +129,25 @@ public partial class EquipmentPanel : Node3D
             return;
         }
 
-        // Subscribe to player state changes
         _gameStateManager.OnLocalPlayerUpdated += UpdatePlayerState;
         _gameStateManager.OnGameStateUpdated += OnGameStateUpdated;
-
-        // Initial update
         UpdatePlayerState(_gameStateManager.LocalPlayer);
     }
 
+    /// <summary>
+    /// Handles game state update events.
+    /// </summary>
     private void OnGameStateUpdated()
     {
-        // Refresh if player state might have changed
         UpdatePlayerState(_gameStateManager.LocalPlayer);
     }
 
+    /// <summary>
+    /// Sets the player state and triggers display update.
+    /// </summary>
+    /// <param name="playerState">The player state to display.</param>
     public void SetPlayerState(PlayerState playerState)
     {
-        // Always update the display even if it's the same player object
-        // because the player's state (equipment, level, etc.) may have changed
         bool isSameReference = _playerState == playerState;
         GD.Print($"[EquipmentPanel] SetPlayerState called. Same reference? {isSameReference}");
 
@@ -106,12 +155,19 @@ public partial class EquipmentPanel : Node3D
         UpdateDisplay();
     }
 
+    /// <summary>
+    /// Updates player state and refreshes display.
+    /// </summary>
+    /// <param name="playerState">The updated player state.</param>
     private void UpdatePlayerState(PlayerState playerState)
     {
         GD.Print("Called UpdatePlayerState !");
         SetPlayerState(playerState);
     }
 
+    /// <summary>
+    /// Updates all display elements for current player state.
+    /// </summary>
     private void UpdateDisplay()
     {
         if (_playerState == null)
@@ -124,6 +180,9 @@ public partial class EquipmentPanel : Node3D
         UpdateEquipmentSlots();
     }
 
+    /// <summary>
+    /// Updates player information labels (name, level, race, class, bonus).
+    /// </summary>
     private void UpdatePlayerInfo()
     {
         if (_playerNameLabel != null)
@@ -152,6 +211,9 @@ public partial class EquipmentPanel : Node3D
         }
     }
 
+    /// <summary>
+    /// Updates equipment slot displays for worn and carried items.
+    /// </summary>
     private void UpdateEquipmentSlots()
     {
         GD.Print(
@@ -160,7 +222,6 @@ public partial class EquipmentPanel : Node3D
 
         ClearEquipmentVisuals();
 
-        // Display worn equipment in appropriate slots
         var wornEquipment = _playerState.GetWornEquipment();
         GD.Print($"[EquipmentPanel] Player has {wornEquipment.Count} worn items");
 
@@ -176,7 +237,6 @@ public partial class EquipmentPanel : Node3D
             }
             else
             {
-                // No-slot items (amulets, rings) go to carried container
                 Vector3 carriedPos =
                     _carriedEquipmentContainer?.GlobalTransform.Origin ?? Vector3.Zero;
                 GD.Print($"[EquipmentPanel] Creating visual in carried area: {carriedPos}");
@@ -184,15 +244,13 @@ public partial class EquipmentPanel : Node3D
             }
         }
 
-        // Display carried equipment
         var carriedEquipment = _playerState.GetCarriedEquipment();
         foreach (var item in carriedEquipment)
         {
             Vector3 position;
             if (_carriedEquipmentContainer != null)
             {
-                // Position in grid within carried container
-                int index = _cardVisuals.Count % 6; // Max 6 items visible
+                int index = _cardVisuals.Count % 6;
                 float x = (index % 3) * 1.2f;
                 float z = (index / 3) * 1.5f;
                 position = _carriedEquipmentContainer.GlobalTransform.Origin + new Vector3(x, 0, z);
@@ -202,10 +260,15 @@ public partial class EquipmentPanel : Node3D
                 position = Vector3.Zero;
             }
 
-            CreateCardVisual(item, position, true, false); // Carried items are face-up but not worn
+            CreateCardVisual(item, position, true, false);
         }
     }
 
+    /// <summary>
+    /// Gets the 3D position for an equipment slot.
+    /// </summary>
+    /// <param name="slot">The equipment slot.</param>
+    /// <returns>The world position for the slot.</returns>
     private Vector3 GetSlotPosition(EquipmentSlot slot)
     {
         if (_slotContainers.TryGetValue(slot, out var container) && container != null)
@@ -213,7 +276,6 @@ public partial class EquipmentPanel : Node3D
             return container.GlobalTransform.Origin;
         }
 
-        // Fallback positions based on slot type
         return slot switch
         {
             EquipmentSlot.Head => new Vector3(-1.5f, 1.5f, 0),
@@ -227,12 +289,12 @@ public partial class EquipmentPanel : Node3D
     }
 
     /// <summary>
-    /// Create a card visual for an item
+    /// Creates a 3D card visual for an item.
     /// </summary>
-    /// <param name="itemData">The item card data</param>
-    /// <param name="position">3D position to place the card</param>
-    /// <param name="faceUp">True = face-up (visible to all players), False = face-down (only for cards in hand)</param>
-    /// <param name="isWorn">True = equipped and giving bonus, False = carried (no bonus)</param>
+    /// <param name="itemData">The item card data.</param>
+    /// <param name="position">World position for the card.</param>
+    /// <param name="faceUp">True if card should be face up.</param>
+    /// <param name="isWorn">True if item is currently equipped.</param>
     private void CreateCardVisual(
         ItemCardData itemData,
         Vector3 position,
@@ -244,10 +306,7 @@ public partial class EquipmentPanel : Node3D
 
         if (_cardVisualScene != null)
         {
-            // Use CardVisual scene if assigned
             cardVisualInstance = _cardVisualScene.Instantiate<Node3D>();
-
-            // Try to set CardData if it's a CardVisual component
             var cardVisualComponent = cardVisualInstance.GetNodeOrNull<CardVisual>(".");
             if (cardVisualComponent != null)
             {
@@ -255,13 +314,11 @@ public partial class EquipmentPanel : Node3D
             }
             else
             {
-                // Fallback: create simple visual
                 CreateSimpleCardVisual(cardVisualInstance, itemData, isWorn);
             }
         }
         else
         {
-            // Create simple visual directly
             cardVisualInstance = new Node3D();
             CreateSimpleCardVisual(cardVisualInstance, itemData, isWorn);
         }
@@ -269,58 +326,53 @@ public partial class EquipmentPanel : Node3D
         AddChild(cardVisualInstance);
         cardVisualInstance.GlobalPosition = position;
 
-        // Configure card appearance
         if (!faceUp)
         {
-            // Simple rotation for face-down
             cardVisualInstance.RotationDegrees = new Vector3(0, 180, 0);
         }
 
-        // Store reference
         _cardVisuals[itemData.Id] = cardVisualInstance;
 
         GD.Print($"[EquipmentPanel] Created card visual for: {itemData.Name} at {position}");
 
-        // Add drag handler if enabled
         AddDragDropHandler(cardVisualInstance, itemData, isWorn);
     }
 
+    /// <summary>
+    /// Creates a simple mesh-based card visual as fallback.
+    /// </summary>
+    /// <param name="parent">Parent node for the card visual.</param>
+    /// <param name="itemData">The item data.</param>
+    /// <param name="isWorn">Whether item is worn.</param>
     private void CreateSimpleCardVisual(Node3D parent, ItemCardData itemData, bool isWorn = true)
     {
-        // Create a simple mesh for the card
         var meshInstance = new MeshInstance3D();
         var boxMesh = new BoxMesh { Size = new Vector3(0.7f, 1f, 0.01f) };
         meshInstance.Mesh = boxMesh;
 
-        // Color code by item type/bonus and worn status
         var material = new StandardMaterial3D();
         Color baseColor = itemData.Bonus switch
         {
-            >= 5 => new Color(1f, 0.5f, 0f), // Orange for high bonus
-            >= 3 => new Color(0f, 1f, 0f), // Green for medium bonus
-            _ => new Color(0.5f, 0.5f, 1f), // Blue for low bonus
+            >= 5 => new Color(1f, 0.5f, 0f),
+            >= 3 => new Color(0f, 1f, 0f),
+            _ => new Color(0.5f, 0.5f, 1f),
         };
 
-        // Adjust color based on worn status
         if (isWorn)
         {
-            // Worn equipment: brighter, active look
             material.AlbedoColor = baseColor;
-            material.Emission = baseColor * 0.3f; // Subtle glow
+            material.Emission = baseColor * 0.3f;
             material.EmissionEnabled = true;
         }
         else
         {
-            // Carried equipment: duller, inactive look
-            material.AlbedoColor = baseColor * 0.6f; // 60% brightness
+            material.AlbedoColor = baseColor * 0.6f;
             material.EmissionEnabled = false;
         }
 
         meshInstance.MaterialOverride = material;
-
         parent.AddChild(meshInstance);
 
-        // Add label with item name, bonus, and status
         var label = new Label3D
         {
             Text = $"{itemData.Name}\n+{itemData.Bonus}\n{(isWorn ? "EQUIPPED" : "CARRIED")}",
@@ -331,9 +383,13 @@ public partial class EquipmentPanel : Node3D
         parent.AddChild(label);
     }
 
+    /// <summary>
+    /// Creates a tooltip for an item.
+    /// </summary>
+    /// <param name="itemData">The item data.</param>
+    /// <returns>Tooltip node.</returns>
     private Node3D CreateTooltipForItem(ItemCardData itemData)
     {
-        // Create a simple tooltip with item info
         var tooltip = new Node3D();
         var label = new Label3D
         {
@@ -346,6 +402,9 @@ public partial class EquipmentPanel : Node3D
         return tooltip;
     }
 
+    /// <summary>
+    /// Clears all equipment card visuals.
+    /// </summary>
     private void ClearEquipmentVisuals()
     {
         foreach (var cardVisual in _cardVisuals.Values)
@@ -355,6 +414,9 @@ public partial class EquipmentPanel : Node3D
         _cardVisuals.Clear();
     }
 
+    /// <summary>
+    /// Clears all display elements.
+    /// </summary>
     private void ClearDisplay()
     {
         ClearEquipmentVisuals();
@@ -371,7 +433,11 @@ public partial class EquipmentPanel : Node3D
             _classLabel.Text = "Class: --";
     }
 
-    // Public methods for interaction
+    /// <summary>
+    /// Attempts to equip an item.
+    /// </summary>
+    /// <param name="itemId">The item ID to equip.</param>
+    /// <returns>True if can equip; false otherwise.</returns>
     public bool TryEquipItem(string itemId)
     {
         if (_playerState == null)
@@ -379,7 +445,6 @@ public partial class EquipmentPanel : Node3D
 
         if (_playerState.CanEquipItem(itemId))
         {
-            // TODO: Send equip request to server via GameStateManager
             GD.Print($"[EquipmentPanel] Requesting to equip: {itemId}");
             return true;
         }
@@ -388,6 +453,11 @@ public partial class EquipmentPanel : Node3D
         return false;
     }
 
+    /// <summary>
+    /// Attempts to unequip an item.
+    /// </summary>
+    /// <param name="itemId">The item ID to unequip.</param>
+    /// <returns>True if item was unequipped; false otherwise.</returns>
     public bool TryUnequipItem(string itemId)
     {
         if (_playerState == null)
@@ -395,7 +465,6 @@ public partial class EquipmentPanel : Node3D
 
         if (_playerState.WornEquipmentIds.Contains(itemId))
         {
-            // TODO: Send unequip request to server
             GD.Print($"[EquipmentPanel] Requesting to unequip: {itemId}");
             return true;
         }
@@ -403,7 +472,9 @@ public partial class EquipmentPanel : Node3D
         return false;
     }
 
-    // Cleanup
+    /// <summary>
+    /// Unsubscribes from events on exit.
+    /// </summary>
     public override void _ExitTree()
     {
         if (_gameStateManager != null)
@@ -413,81 +484,95 @@ public partial class EquipmentPanel : Node3D
         }
     }
 
+    /// <summary>
+    /// Adds drag-drop handler to a card visual.
+    /// </summary>
+    /// <param name="cardVisual">The card visual node.</param>
+    /// <param name="itemData">The item data.</param>
+    /// <param name="isWorn">Whether item is worn.</param>
     private void AddDragDropHandler(Node3D cardVisual, ItemCardData itemData, bool isWorn)
     {
         var dragHandler = new DragDropHandler();
         cardVisual.AddChild(dragHandler);
-        // Connect signals
         dragHandler.DragStarted += OnDragStarted;
         dragHandler.DragEnded += OnDragEnded;
         dragHandler.DroppedOnSlot += OnDroppedOnSlot;
-        // Set card data
         dragHandler.SetCardData(itemData.Id, itemData);
         GD.Print($"[EquipmentPanel] Added drag handler to: {itemData.Name}");
     }
 
+    /// <summary>
+    /// Handles drag started event.
+    /// </summary>
+    /// <param name="draggable">The dragged node.</param>
     private void OnDragStarted(Node3D draggable)
     {
         GD.Print($"[EquipmentPanel] Drag started: {draggable.Name}");
-        // TODO: Highlight valid drop slots
     }
 
+    /// <summary>
+    /// Handles drag ended event.
+    /// </summary>
+    /// <param name="draggable">The dragged node.</param>
+    /// <param name="position">Final position.</param>
     private void OnDragEnded(Node3D draggable, Vector3 position)
     {
         GD.Print($"[EquipmentPanel] Drag ended at: {position}");
-        // TODO: Remove slot highlights
     }
 
+    /// <summary>
+    /// Handles drop on slot event.
+    /// </summary>
+    /// <param name="draggable">The dragged node.</param>
+    /// <param name="slotInt">The slot value as int.</param>
     private void OnDroppedOnSlot(Node3D draggable, int slotInt)
     {
         EquipmentSlot slot = (EquipmentSlot)slotInt;
         GD.Print($"[EquipmentPanel] Dropped on slot: {slot}");
-        // Find which card was dragged
+
         var dragHandler = draggable.GetNodeOrNull<DragDropHandler>(".");
         if (dragHandler == null)
         {
             GD.PrintErr("[EquipmentPanel] No DragDropHandler found on draggable");
             return;
         }
-        // Get card visual (parent of DragDropHandler)
+
         var cardVisual = draggable.GetParent() as CardVisual;
         if (cardVisual == null || cardVisual.CardData == null)
         {
             GD.PrintErr("[EquipmentPanel] Could not get CardVisual or CardData from draggable");
             return;
         }
+
         var cardData = cardVisual.CardData;
         GD.Print($"[EquipmentPanel] Found card data: {cardData.Name} (ID: {cardData.Id})");
+
         if (_playerState == null)
         {
             GD.PrintErr("[EquipmentPanel] No PlayerState set on EquipmentPanel");
             return;
         }
-        // Check if item is currently equipped or carried
+
         bool isEquipped = _playerState.WornEquipmentIds.Contains(cardData.Id);
         bool isCarried = _playerState.CarriedEquipmentIds.Contains(cardData.Id);
         GD.Print($"[EquipmentPanel] Item state: Equipped={isEquipped}, Carried={isCarried}");
+
         if (slot == EquipmentSlot.None)
         {
-            // Dropping in carried zone
             if (isEquipped)
             {
-                // Unequip item
                 GD.Print($"[EquipmentPanel] Attempting to unequip {cardData.Name}...");
                 bool success = _playerState.UnequipItem(cardData.Id);
                 GD.Print($"[EquipmentPanel] Unequip result: {success}");
             }
-            // If already carried, no state change needed
         }
         else if (isCarried)
         {
-            // Try to equip from carried
             GD.Print($"[EquipmentPanel] Attempting to equip {cardData.Name}...");
             bool success = _playerState.EquipItem(cardData.Id);
             GD.Print($"[EquipmentPanel] Equip result: {success}");
         }
-        // else if (isEquipped): moving between slots - just visual for now
-        // Update bonus display
+
         UpdatePlayerInfo();
         GD.Print($"[EquipmentPanel] Bonus updated: {_playerState.TotalCombatBonus}");
     }

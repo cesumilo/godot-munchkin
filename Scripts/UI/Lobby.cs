@@ -4,6 +4,14 @@ using System.Text;
 using System.Threading.Tasks;
 using Godot;
 
+/// <summary>
+/// Manages the lobby scene for game session selection and joining.
+/// Handles HTTP API calls for lobby management and WebSocket connection.
+/// </summary>
+/// <remarks>
+/// Per AGENTS.md architecture: HTTP for lobby management, WebSocket for gameplay.
+/// Supports lobby creation, listing, joining, and game start.
+/// </remarks>
 public partial class Lobby : Node3D
 {
     // HTTP client for API calls
@@ -27,7 +35,9 @@ public partial class Lobby : Node3D
     private string _currentLobbyId = "";
     private bool _isHost = false;
 
-    // Request tracking
+    /// <summary>
+    /// Defines types of HTTP requests for tracking.
+    /// </summary>
     private enum RequestType
     {
         ListLobbies,
@@ -38,18 +48,29 @@ public partial class Lobby : Node3D
 
     private RequestType _lastRequestType = RequestType.ListLobbies;
 
-    // Constants
-    private const string SERVER_BASE_URL = "http://90.28.104.14:1337";
-
     /// <summary>
-    /// Lobby item data structure
+    /// Represents a lobby item from the server.
     /// </summary>
     public class LobbyItem
     {
+        /// <summary>
+        /// Gets or sets the lobby identifier.
+        /// </summary>
         public string Id { get; set; }
+
+        /// <summary>
+        /// Gets or sets the lobby display name.
+        /// </summary>
         public string Name { get; set; }
+
+        /// <summary>
+        /// Gets or sets the current player count.
+        /// </summary>
         public int PlayerCount { get; set; }
 
+        /// <summary>
+        /// Returns formatted lobby string for display.
+        /// </summary>
         public override string ToString()
         {
             return $"{Name} ({PlayerCount}/6 players)";
@@ -57,7 +78,7 @@ public partial class Lobby : Node3D
     }
 
     /// <summary>
-    /// Initialize the lobby
+    /// Initializes UI and starts fetching lobbies.
     /// </summary>
     public override void _Ready()
     {
@@ -79,7 +100,7 @@ public partial class Lobby : Node3D
     }
 
     /// <summary>
-    /// Initialize UI elements
+    /// Initializes UI element references.
     /// </summary>
     private void InitializeUI()
     {
@@ -105,7 +126,7 @@ public partial class Lobby : Node3D
     }
 
     /// <summary>
-    /// Initialize HTTP request component
+    /// Creates and configures HTTP request node.
     /// </summary>
     private void InitializeHttpRequest()
     {
@@ -117,7 +138,7 @@ public partial class Lobby : Node3D
     }
 
     /// <summary>
-    /// Update player count display
+    /// Updates the player count display label.
     /// </summary>
     private void UpdatePlayerCountDisplay()
     {
@@ -128,8 +149,9 @@ public partial class Lobby : Node3D
     }
 
     /// <summary>
-    /// Execute HTTP request immediately or queue it if one is in progress
+    /// Queues or executes an HTTP request.
     /// </summary>
+    /// <param name="requestAction">The action to execute.</param>
     private void ExecuteOrQueueRequest(Action requestAction)
     {
         if (_isRequestInProgress)
@@ -157,7 +179,7 @@ public partial class Lobby : Node3D
     }
 
     /// <summary>
-    /// Process next request in queue
+    /// Processes next request in queue.
     /// </summary>
     private void ProcessNextRequest()
     {
@@ -178,8 +200,9 @@ public partial class Lobby : Node3D
     }
 
     /// <summary>
-    /// Update UI button states based on request activity
+    /// Updates UI button enabled states.
     /// </summary>
+    /// <param name="enabled">Whether buttons should be enabled.</param>
     private void UpdateButtonStates(bool enabled)
     {
         if (_createLobbyButton != null)
@@ -196,8 +219,10 @@ public partial class Lobby : Node3D
     }
 
     /// <summary>
-    /// Show status message
+    /// Shows status message in UI.
     /// </summary>
+    /// <param name="message">The message to display.</param>
+    /// <param name="isError">True if error (red text); false otherwise.</param>
     private void ShowStatus(string message, bool isError = false)
     {
         if (_statusLabel != null)
@@ -213,7 +238,7 @@ public partial class Lobby : Node3D
     }
 
     /// <summary>
-    /// Refresh lobby list from server
+    /// Fetches list of available lobbies from server.
     /// </summary>
     private void RefreshLobbyList()
     {
@@ -226,7 +251,7 @@ public partial class Lobby : Node3D
         ShowStatus("Fetching lobbies...");
         _lastRequestType = RequestType.ListLobbies;
 
-        string url = $"{SERVER_BASE_URL}/lobby";
+        string url = $"{NetworkManager.SERVER_BASE_URL}/lobby";
         string[] headers = new string[] { $"Authorization: Bearer {Main.JwtToken}" };
 
         ExecuteOrQueueRequest(() =>
@@ -252,7 +277,7 @@ public partial class Lobby : Node3D
     }
 
     /// <summary>
-    /// Create a new lobby
+    /// Creates a new lobby.
     /// </summary>
     private void CreateLobby()
     {
@@ -265,7 +290,7 @@ public partial class Lobby : Node3D
         ShowStatus("Creating lobby...");
         _lastRequestType = RequestType.CreateLobby;
 
-        string url = $"{SERVER_BASE_URL}/lobby";
+        string url = $"{NetworkManager.SERVER_BASE_URL}/lobby";
         string[] headers = new string[] { $"Authorization: Bearer {Main.JwtToken}" };
 
         ExecuteOrQueueRequest(() =>
@@ -291,8 +316,9 @@ public partial class Lobby : Node3D
     }
 
     /// <summary>
-    /// Join selected lobby
+    /// Joins the selected lobby.
     /// </summary>
+    /// <param name="lobbyId">The lobby ID to join.</param>
     private void JoinLobby(string lobbyId)
     {
         if (string.IsNullOrEmpty(Main.JwtToken))
@@ -309,9 +335,9 @@ public partial class Lobby : Node3D
 
         ShowStatus($"Joining lobby {lobbyId}...");
         _lastRequestType = RequestType.JoinLobby;
-        _selectedLobbyId = lobbyId; // Store before sending request
+        _selectedLobbyId = lobbyId;
 
-        string url = $"{SERVER_BASE_URL}/lobby/{lobbyId}/join";
+        string url = $"{NetworkManager.SERVER_BASE_URL}/lobby/{lobbyId}/join";
         string[] headers = new string[] { $"Authorization: Bearer {Main.JwtToken}" };
 
         ExecuteOrQueueRequest(() =>
@@ -337,8 +363,9 @@ public partial class Lobby : Node3D
     }
 
     /// <summary>
-    /// Start the game (host only)
+    /// Starts the game (host only).
     /// </summary>
+    /// <param name="lobbyId">The lobby ID to start.</param>
     private void StartGame(string lobbyId)
     {
         if (string.IsNullOrEmpty(Main.JwtToken))
@@ -356,7 +383,7 @@ public partial class Lobby : Node3D
         ShowStatus($"Starting game for lobby {lobbyId}...");
         _lastRequestType = RequestType.StartGame;
 
-        string url = $"{SERVER_BASE_URL}/lobby/{lobbyId}/start";
+        string url = $"{NetworkManager.SERVER_BASE_URL}/lobby/{lobbyId}/start";
         string[] headers = new string[] { $"Authorization: Bearer {Main.JwtToken}" };
 
         ExecuteOrQueueRequest(() =>
@@ -382,8 +409,9 @@ public partial class Lobby : Node3D
     }
 
     /// <summary>
-    /// Connect to lobby WebSocket
+    /// Connects to lobby WebSocket for real-time gameplay.
     /// </summary>
+    /// <param name="lobbyId">The lobby ID to connect to.</param>
     private void ConnectToLobbyWebSocket(string lobbyId)
     {
         if (string.IsNullOrEmpty(lobbyId))
@@ -392,7 +420,6 @@ public partial class Lobby : Node3D
             return;
         }
 
-        // Get NetworkManager instance
         var networkManager = NetworkManager.Instance;
         if (networkManager == null || networkManager.WebSocketClient == null)
         {
@@ -447,7 +474,7 @@ public partial class Lobby : Node3D
     }
 
     /// <summary>
-    /// Transition to game scene
+    /// Transitions to game scene when game starts.
     /// </summary>
     private void TransitionToGame()
     {
@@ -455,15 +482,11 @@ public partial class Lobby : Node3D
         {
             ShowStatus("Transitioning to game...");
 
-            // TODO: Load actual game scene when created
-            // For now, just show a message
-            ShowStatus("Game scene not implemented yet. WebSocket connected successfully!", false);
-
             // Enable start game button for host
             if (_isHost)
             {
                 _startGameButton.Visible = true;
-                UpdateButtonStates(true); // Update start button state
+                UpdateButtonStates(true);
                 ShowStatus("You are the host. Ready to start the game!", false);
             }
         }
@@ -474,8 +497,7 @@ public partial class Lobby : Node3D
         }
     }
 
-    // ============== UI EVENT HANDLERS ==============
-
+    // UI Event Handlers
     private void OnCreateLobbyButtonPressed()
     {
         CreateLobby();
@@ -508,14 +530,15 @@ public partial class Lobby : Node3D
         if (index >= 0 && index < _lobbies.Count)
         {
             _selectedLobbyId = _lobbies[(int)index].Id;
-            UpdateButtonStates(true); // Update join button state
+            UpdateButtonStates(true);
 
             GD.Print($"[Lobby] Selected lobby: {_selectedLobbyId}");
         }
     }
 
-    // ============== HTTP RESPONSE HANDLER ==============
-
+    /// <summary>
+    /// Handles HTTP response completion.
+    /// </summary>
     private void OnHttpRequestCompleted(
         long result,
         long responseCode,
@@ -523,13 +546,11 @@ public partial class Lobby : Node3D
         byte[] body
     )
     {
-        // Check if the connection itself succeeded
         if (result != (long)HttpRequest.Result.Success)
         {
             ShowStatus($"Connection Error: {result}", true);
             GD.PrintErr($"[Lobby] Connection Error: {result}");
 
-            // Request completed (with error), process next one in queue
             _isRequestInProgress = false;
             ProcessNextRequest();
             return;
@@ -542,32 +563,26 @@ public partial class Lobby : Node3D
         {
             switch (responseCode)
             {
-                case 200: // Success for GET /lobby or POST /lobby/{id}/join or POST /lobby/{id}/start
+                case 200:
                     Handle200Response(responseBody);
                     break;
-
-                case 201: // Created for POST /lobby
+                case 201:
                     HandleLobbyCreationResponse(responseBody);
                     break;
-
                 case 400:
                     ShowStatus("Bad request. Please try again.", true);
                     break;
-
                 case 401:
                     ShowStatus("Authentication failed. Please login again.", true);
                     break;
-
                 case 404:
                     ShowStatus("Lobby not found.", true);
                     break;
-
                 default:
                     ShowStatus($"Server error: {responseCode}", true);
                     break;
             }
 
-            // Request completed, process next one in queue
             _isRequestInProgress = false;
             ProcessNextRequest();
         }
@@ -579,8 +594,9 @@ public partial class Lobby : Node3D
     }
 
     /// <summary>
-    /// Handle 200 OK responses based on the last request type
+    /// Routes 200 responses to appropriate handler.
     /// </summary>
+    /// <param name="responseBody">Response body string.</param>
     private void Handle200Response(string responseBody)
     {
         GD.Print($"[Lobby] Handling 200 response for request type: {_lastRequestType}");
@@ -590,20 +606,15 @@ public partial class Lobby : Node3D
             case RequestType.ListLobbies:
                 HandleLobbyListResponse(responseBody);
                 break;
-
             case RequestType.JoinLobby:
                 HandleJoinLobbyResponse(responseBody);
                 break;
-
             case RequestType.StartGame:
                 HandleStartGameResponse(responseBody);
                 break;
-
             case RequestType.CreateLobby:
-                // Should be 201, but handle just in case
                 HandleLobbyCreationResponse(responseBody);
                 break;
-
             default:
                 GD.PrintErr($"[Lobby] Unknown request type for 200 response: {_lastRequestType}");
                 ShowStatus("Unexpected response from server", true);
@@ -612,8 +623,9 @@ public partial class Lobby : Node3D
     }
 
     /// <summary>
-    /// Handle lobby list response
+    /// Parses lobby list response.
     /// </summary>
+    /// <param name="responseBody">Response JSON string.</param>
     private void HandleLobbyListResponse(string responseBody)
     {
         try
@@ -663,8 +675,9 @@ public partial class Lobby : Node3D
     }
 
     /// <summary>
-    /// Handle lobby creation response
+    /// Parses lobby creation response.
     /// </summary>
+    /// <param name="responseBody">Response JSON string.</param>
     private void HandleLobbyCreationResponse(string responseBody)
     {
         try
@@ -682,7 +695,6 @@ public partial class Lobby : Node3D
                 ShowStatus($"Lobby created: {lobbyId}", false);
                 GD.Print($"[Lobby] Created lobby with ID: {lobbyId}");
 
-                // Auto-join the created lobby
                 _selectedLobbyId = lobbyId;
                 GD.Print($"[Lobby] Auto-joining created lobby: {lobbyId}");
                 JoinLobby(lobbyId);
@@ -701,29 +713,23 @@ public partial class Lobby : Node3D
     }
 
     /// <summary>
-    /// Handle join lobby response
+    /// Parses join lobby response.
     /// </summary>
+    /// <param name="responseBody">Response JSON string.</param>
     private void HandleJoinLobbyResponse(string responseBody)
     {
         try
         {
             GD.Print($"[Lobby] Join lobby response: {responseBody}");
-            GD.Print(
-                $"[Lobby] Current lobby ID: {_currentLobbyId}, Selected lobby ID: {_selectedLobbyId}"
-            );
 
-            // Response is just a string message like "Successfully joined the game"
             ShowStatus("Successfully joined lobby!", false);
-
-            // Store current lobby ID
             _currentLobbyId = _selectedLobbyId;
-            _isHost = false; // Not host when joining
+            _isHost = false;
 
             GD.Print(
                 $"[Lobby] After join - Current lobby ID: {_currentLobbyId}, IsHost: {_isHost}"
             );
 
-            // Connect to WebSocket
             if (!string.IsNullOrEmpty(_currentLobbyId))
             {
                 GD.Print($"[Lobby] Calling ConnectToLobbyWebSocket for lobby: {_currentLobbyId}");
@@ -743,19 +749,15 @@ public partial class Lobby : Node3D
     }
 
     /// <summary>
-    /// Handle start game response
+    /// Parses start game response.
     /// </summary>
+    /// <param name="responseBody">Response JSON string.</param>
     private void HandleStartGameResponse(string responseBody)
     {
         try
         {
             GD.Print($"[Lobby] Start game response: {responseBody}");
-
-            // Response is just "OK" or similar
             ShowStatus("Game started!", false);
-
-            // TODO: Transition to actual game scene
-            // For now, just show success message
         }
         catch (Exception ex)
         {
@@ -764,23 +766,7 @@ public partial class Lobby : Node3D
         }
     }
 
-    /// <summary>
-    /// Handle lobby action responses (legacy for 204 No Content)
-    /// </summary>
-    private void HandleLobbyActionResponse(string responseBody)
-    {
-        // For 204 No Content responses, responseBody is empty
-        ShowStatus("Action successful", false);
-
-        // If we have a current lobby, connect to WebSocket
-        if (!string.IsNullOrEmpty(_currentLobbyId))
-        {
-            ConnectToLobbyWebSocket(_currentLobbyId);
-        }
-    }
-
-    // ============== WEBSOCKET EVENT HANDLERS ==============
-
+    // WebSocket Event Handlers
     private void OnWebSocketConnectionStateChanged(bool connected)
     {
         if (connected)
@@ -798,17 +784,14 @@ public partial class Lobby : Node3D
     {
         GD.Print($"[Lobby] WebSocket message received: {messageType}");
 
-        // Handle different message types
         switch (messageType)
         {
             case MessageProtocol.GAME_STATE:
                 HandleGameStateMessage(data);
                 break;
-
             case MessageProtocol.ERROR:
                 HandleErrorMessage(data);
                 break;
-
             default:
                 GD.Print($"[Lobby] Unhandled message type: {messageType}");
                 break;
@@ -822,27 +805,26 @@ public partial class Lobby : Node3D
     }
 
     /// <summary>
-    /// Handle GAME_STATE message from server
+    /// Parses GAME_STATE message from server.
     /// </summary>
+    /// <param name="data">Message data dictionary.</param>
     private void HandleGameStateMessage(Godot.Collections.Dictionary data)
     {
         GD.Print("[Lobby] Received GAME_STATE message");
 
         if (MessageProtocol.TryParseGameState(data, out var gameState))
         {
-            // Update UI based on game state
             if (!string.IsNullOrEmpty(gameState.Winner))
             {
                 ShowStatus($"Game over! Winner: {gameState.Winner}", false);
             }
-
-            // TODO: Update game UI with state information
         }
     }
 
     /// <summary>
-    /// Handle ERROR message from server
+    /// Parses ERROR message from server.
     /// </summary>
+    /// <param name="data">Message data dictionary.</param>
     private void HandleErrorMessage(Godot.Collections.Dictionary data)
     {
         if (MessageProtocol.TryParseError(data, out var error))
@@ -853,11 +835,10 @@ public partial class Lobby : Node3D
     }
 
     /// <summary>
-    /// Clean up resources
+    /// Unsubscribes from events on cleanup.
     /// </summary>
     public override void _ExitTree()
     {
-        // Disconnect WebSocket event handlers
         var networkManager = NetworkManager.Instance;
         if (networkManager != null && networkManager.WebSocketClient != null)
         {

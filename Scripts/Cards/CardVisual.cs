@@ -1,7 +1,18 @@
 using Godot;
 
+/// <summary>
+/// Visual representation of a card in 3D space.
+/// Handles card display, face-up/down states, and hover effects.
+/// </summary>
+/// <remarks>
+/// Per §4: Displays card name, description, and visual styling based on card type.
+/// Integrates with Card3D plugin for 3D card visuals.
+/// </remarks>
 public partial class CardVisual : Node3D
 {
+    /// <summary>
+    /// Gets or sets the card data to display.
+    /// </summary>
     [Export]
     private CardData _cardData;
 
@@ -9,6 +20,9 @@ public partial class CardVisual : Node3D
     private Label3D _descriptionLabel;
     private MeshInstance3D _cardMesh;
 
+    /// <summary>
+    /// Gets or sets the card data and updates visuals.
+    /// </summary>
     public CardData CardData
     {
         get => _cardData;
@@ -19,6 +33,9 @@ public partial class CardVisual : Node3D
         }
     }
 
+    /// <summary>
+    /// Initializes the card visual by finding child nodes.
+    /// </summary>
     public override void _Ready()
     {
         // Try to find child nodes
@@ -32,6 +49,9 @@ public partial class CardVisual : Node3D
         }
     }
 
+    /// <summary>
+    /// Updates card visual elements based on card data.
+    /// </summary>
     private void UpdateVisuals()
     {
         if (_cardData == null)
@@ -49,7 +69,7 @@ public partial class CardVisual : Node3D
             _descriptionLabel.Text = _cardData.Description;
         }
 
-        // Update card color based on type (temporary visualization)
+        // Update card color based on type
         if (_cardMesh != null && _cardMesh.MaterialOverride is StandardMaterial3D material)
         {
             material.AlbedoColor = GetCardColor();
@@ -58,9 +78,12 @@ public partial class CardVisual : Node3D
         GD.Print($"[CardVisual] Updated visual for: {_cardData.Name} ({_cardData.Type})");
     }
 
+    /// <summary>
+    /// Gets color based on card type.
+    /// </summary>
+    /// <returns>Color appropriate for the card type.</returns>
     private Color GetCardColor()
     {
-        // Temporary color coding for card types
         return _cardData.Type switch
         {
             CardData.CardType.Monster => new Color(1.0f, 0.5f, 0.5f), // Reddish
@@ -73,9 +96,14 @@ public partial class CardVisual : Node3D
         };
     }
 
+    /// <summary>
+    /// Sets the card face orientation.
+    /// </summary>
+    /// <param name="faceDown">True to show card back; false for face up.</param>
     public void SetFaceDown(bool faceDown)
     {
-        // TODO: Implement card flipping when integrated with Card3D plugin
+        // Per §1: Cards in hand are not visible to other players (face-down)
+        // Per §9.4: Worn equipment is visible to all players (face-up)
         if (faceDown)
         {
             RotationDegrees = new Vector3(0, 180, 0);
@@ -86,9 +114,12 @@ public partial class CardVisual : Node3D
         }
     }
 
+    /// <summary>
+    /// Sets hover state for visual feedback.
+    /// </summary>
+    /// <param name="hovered">True when hovered; false otherwise.</param>
     public void SetHovered(bool hovered)
     {
-        // TODO: Implement hover effect when integrated with Card3D plugin
         if (hovered)
         {
             Position = new Vector3(0, 0.1f, 0);

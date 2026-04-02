@@ -4,32 +4,68 @@ using System.Text.Json;
 using Godot;
 
 /// <summary>
-/// Manages game state by integrating network messages with GameStateMachine
-/// Bridges between server messages and client-side state representation
+/// Manages game state by integrating network messages with GameStateMachine.
+/// Bridges between server messages and client-side state representation.
 /// </summary>
+/// <remarks>
+/// Subscribes to WebSocket events, parses server messages, and updates the local GameStateMachine
+/// and PlayerState instances. Handles full state snapshots and incremental updates from server.
+/// </remarks>
 public partial class GameStateManager : Node
 {
     // Singleton instance
     private static GameStateManager _instance;
+
+    /// <summary>
+    /// Gets the singleton instance of GameStateManager.
+    /// </summary>
     public static GameStateManager Instance => _instance;
 
     // Core state
+    /// <summary>
+    /// Gets the game state machine that tracks current game phase and combat state.
+    /// </summary>
     public GameStateMachine StateMachine { get; private set; }
 
     // Local player reference
+    /// <summary>
+    /// Gets the local player's state.
+    /// </summary>
     public PlayerState LocalPlayer { get; private set; }
+
+    /// <summary>
+    /// Gets the local player's unique identifier.
+    /// </summary>
     public string LocalPlayerId { get; private set; } = string.Empty;
 
     // Events
+    /// <summary>
+    /// Emitted when the game state is updated from server.
+    /// </summary>
     public event Action OnGameStateUpdated;
+
+    /// <summary>
+    /// Emitted when the local player's state is updated.
+    /// </summary>
+    /// <param name="player">The updated player state.</param>
     public event Action<PlayerState> OnLocalPlayerUpdated;
+
+    /// <summary>
+    /// Emitted when an error occurs.
+    /// </summary>
+    /// <param name="message">The error message.</param>
     public event Action<string> OnError;
 
     // Network integration
     private NetworkManager _networkManager;
     private WebSocketClient _webSocketClient;
 
-    // Called when the node enters the scene tree
+    /// <summary>
+    /// Initializes the GameStateManager when entering the scene tree.
+    /// </summary>
+    /// <remarks>
+    /// Sets up singleton instance, initializes GameStateMachine, and subscribes to network events.
+    /// </remarks>
     public override void _Ready()
     {
         _instance = this;
@@ -60,7 +96,9 @@ public partial class GameStateManager : Node
         GD.Print("[GameStateManager] Initialized");
     }
 
-    // Clean up
+    /// <summary>
+    /// Cleans up subscriptions and singleton when exiting the scene tree.
+    /// </summary>
     public override void _ExitTree()
     {
         if (_webSocketClient != null)
@@ -72,7 +110,14 @@ public partial class GameStateManager : Node
         _instance = null;
     }
 
-    // Network message handler
+    /// <summary>
+    /// Routes incoming network messages to appropriate handlers.
+    /// </summary>
+    /// <param name="messageType">The type of message received.</param>
+    /// <param name="data">The message data dictionary.</param>
+    /// <remarks>
+    /// Dispatches to specialized handlers based on message type from MessageProtocol constants.
+    /// </remarks>
     private void HandleNetworkMessage(string messageType, Godot.Collections.Dictionary data)
     {
         GD.Print($"[GameStateManager] Received message: {messageType}");
@@ -109,7 +154,14 @@ public partial class GameStateManager : Node
         }
     }
 
-    // Handle GAME_STATE message - full state sync
+    /// <summary>
+    /// Processes a full GAME_STATE message from the server.
+    /// </summary>
+    /// <param name="data">The game state data dictionary.</param>
+    /// <remarks>
+    /// Per §16: Parses complete game state snapshot including players, turn info, and combat state.
+    /// Replaces local state with server-authoritative data.
+    /// </remarks>
     private void HandleGameStateMessage(Godot.Collections.Dictionary data)
     {
         try
@@ -133,7 +185,13 @@ public partial class GameStateManager : Node
         }
     }
 
-    // Update state from server game state
+    /// <summary>
+    /// Updates the local game state from a server game state message.
+    /// </summary>
+    /// <param name="serverState">The parsed server game state.</param>
+    /// <remarks>
+    /// Clears and rebuilds player list, sets active player and phase, parses combat state.
+    /// </remarks>
     private void UpdateFromServerGameState(MessageProtocol.GameStateMessage serverState)
     {
         // Clear existing players
@@ -205,7 +263,14 @@ public partial class GameStateManager : Node
         );
     }
 
-    // Parse player data from server format
+    /// <summary>
+    /// Parses player data from server dictionary format to PlayerState.
+    /// </summary>
+    /// <param name="playerData">The player data from the server.</param>
+    /// <returns>A new PlayerState instance, or null if parsing fails.</returns>
+    /// <remarks>
+    /// Maps server field names to PlayerState properties, handles optional fields safely.
+    /// </remarks>
     private PlayerState ParsePlayerFromServer(Godot.Collections.Dictionary playerData)
     {
         try
@@ -287,7 +352,11 @@ public partial class GameStateManager : Node
         }
     }
 
-    // Map server turn phase to our main game phase
+    /// <summary>
+    /// Maps server TurnPhase to local MainGamePhase.
+    /// </summary>
+    /// <param name="turnPhase">The turn phase from the server.</param>
+    /// <returns>The corresponding MainGamePhase value.</returns>
     private GameStateMachine.MainGamePhase MapTurnPhaseToMainPhase(
         MessageProtocol.TurnPhase turnPhase
     )
@@ -305,7 +374,13 @@ public partial class GameStateManager : Node
         };
     }
 
-    // Handle PLAYER_UPDATE message - individual player update
+    /// <summary>
+    /// Handles incremental player update messages.
+    /// </summary>
+    /// <param name="data">The player update data.</param>
+    /// <remarks>
+    /// Updates a single player's state without full game state refresh.
+    /// </remarks>
     private void HandlePlayerUpdateMessage(Godot.Collections.Dictionary data)
     {
         try
@@ -350,7 +425,13 @@ public partial class GameStateManager : Node
         }
     }
 
-    // Handle TURN_PHASE_CHANGE message
+    /// <summary>
+    /// Handles turn phase change messages.
+    /// </summary>
+    /// <param name="data">The phase change data.</param>
+    /// <remarks>
+    /// Per §7: Updates game phase and triggers UI updates.
+    /// </remarks>
     private void HandleTurnPhaseChangeMessage(Godot.Collections.Dictionary data)
     {
         try
@@ -372,7 +453,13 @@ public partial class GameStateManager : Node
         }
     }
 
-    // Handle COMBAT_START message
+    /// <summary>
+    /// Handles combat start messages.
+    /// </summary>
+    /// <param name="data">The combat start data.</param>
+    /// <remarks>
+    /// Per §8: Transitions to combat phase and initializes combat state.
+    /// </remarks>
     private void HandleCombatStartMessage(Godot.Collections.Dictionary data)
     {
         try
@@ -389,7 +476,13 @@ public partial class GameStateManager : Node
         }
     }
 
-    // Handle COMBAT_RESOLUTION message
+    /// <summary>
+    /// Handles combat resolution messages.
+    /// </summary>
+    /// <param name="data">The combat resolution data.</param>
+    /// <remarks>
+    /// Per §8.5 and §8.6: Processes combat result, level changes, treasure distribution.
+    /// </remarks>
     private void HandleCombatResolutionMessage(Godot.Collections.Dictionary data)
     {
         try
@@ -403,7 +496,13 @@ public partial class GameStateManager : Node
         }
     }
 
-    // Handle ERROR message
+    /// <summary>
+    /// Handles error messages from the server.
+    /// </summary>
+    /// <param name="data">The error data.</param>
+    /// <remarks>
+    /// Parses error code and message, emits OnError event for UI display.
+    /// </remarks>
     private void HandleErrorMessage(Godot.Collections.Dictionary data)
     {
         try
@@ -420,14 +519,23 @@ public partial class GameStateManager : Node
         }
     }
 
-    // Handle connection errors
+    /// <summary>
+    /// Handles WebSocket connection errors.
+    /// </summary>
+    /// <param name="error">The error message.</param>
     private void HandleConnectionError(string error)
     {
         GD.PrintErr($"[GameStateManager] Connection error: {error}");
         OnError?.Invoke($"Connection error: {error}");
     }
 
-    // Test method: Simulate receiving a game state for testing
+    /// <summary>
+    /// Test method: Simulates receiving a game state for testing.
+    /// </summary>
+    /// <remarks>
+    /// Creates mock player data and processes it as if received from server.
+    /// Useful for UI development without server connection.
+    /// </remarks>
     public void TestWithMockData()
     {
         GD.Print("[GameStateManager] Testing with mock data...");

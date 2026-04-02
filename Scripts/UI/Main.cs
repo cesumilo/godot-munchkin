@@ -3,20 +3,40 @@ using System.Diagnostics;
 using System.Text;
 using Godot;
 
+/// <summary>
+/// Main entry point and authentication scene for the Munchkin game.
+/// Handles user login via HTTP API and transitions to lobby scene.
+/// </summary>
+/// <remarks>
+/// Per AGENTS.md architecture: Uses HTTP REST API for authentication before WebSocket gameplay.
+/// Stores JWT token for subsequent API calls and WebSocket connection.
+/// </remarks>
 public partial class Main : Node3D
 {
+    // Input state
     private string usernameText = "";
     private string passwordText = "";
+
+    // Node references
     private HttpRequest httpRequest;
     private Label errorLabel;
     private Button loginButton;
     private bool hasError = false;
 
     // JWT token storage - accessible throughout the application
+    /// <summary>
+    /// Gets the JWT authentication token for API calls.
+    /// </summary>
     public static string JwtToken { get; private set; } = "";
+
+    /// <summary>
+    /// Gets the authenticated player identifier.
+    /// </summary>
     public static string PlayerId { get; private set; } = "";
 
-    // Called when the node enters the scene tree for the first time.
+    /// <summary>
+    /// Initializes UI elements and sets up error label styling.
+    /// </summary>
     public override void _Ready()
     {
         this.httpRequest = GetNode<HttpRequest>("HTTPRequest");
@@ -49,9 +69,16 @@ public partial class Main : Node3D
         UpdateLoginButtonState();
     }
 
-    // Called every frame. 'delta' is the elapsed time since the previous frame.
+    /// <summary>
+    /// Main game loop - currently unused for login scene.
+    /// </summary>
+    /// <param name="delta">Elapsed time since last frame.</param>
     public override void _Process(double delta) { }
 
+    /// <summary>
+    /// Handles username text input changes.
+    /// </summary>
+    /// <param name="text">The current username text.</param>
     public void OnUsernameInputTextChanged(string text)
     {
         this.usernameText = text;
@@ -65,6 +92,10 @@ public partial class Main : Node3D
         UpdateLoginButtonState();
     }
 
+    /// <summary>
+    /// Handles password text input changes.
+    /// </summary>
+    /// <param name="text">The current password text.</param>
     public void OnPasswordInputTextChanged(string text)
     {
         this.passwordText = text;
@@ -78,6 +109,9 @@ public partial class Main : Node3D
         UpdateLoginButtonState();
     }
 
+    /// <summary>
+    /// Initiates login when button is pressed.
+    /// </summary>
     public void OnLoginButtonPressed()
     {
         // Disable button while request is in progress
@@ -103,6 +137,13 @@ public partial class Main : Node3D
         }
     }
 
+    /// <summary>
+    /// Handles HTTP response from login request.
+    /// </summary>
+    /// <param name="result">HTTP request result code.</param>
+    /// <param name="responseCode">HTTP status code.</param>
+    /// <param name="headers">Response headers.</param>
+    /// <param name="body">Response body bytes.</param>
     private void OnHttpRequestRequestCompleted(
         long result,
         long responseCode,
@@ -160,9 +201,13 @@ public partial class Main : Node3D
     }
 
     /// <summary>
-    /// Extract player ID from JWT token (simplified - in reality would parse JWT)
-    /// For now, we'll store the username as player ID
+    /// Extracts player ID from JWT token.
     /// </summary>
+    /// <param name="token">The JWT token string.</param>
+    /// <remarks>
+    /// Simplified implementation - uses username as player ID.
+    /// In production, would parse JWT payload to extract actual user ID.
+    /// </remarks>
     private void ExtractPlayerIdFromToken(string token)
     {
         // In a real implementation, we would parse the JWT token to get the user ID
@@ -172,7 +217,7 @@ public partial class Main : Node3D
     }
 
     /// <summary>
-    /// Transition to the lobby scene after successful login
+    /// Transitions to the lobby scene after successful login.
     /// </summary>
     private void TransitionToLobby()
     {
@@ -199,7 +244,7 @@ public partial class Main : Node3D
     }
 
     /// <summary>
-    /// Update the login button state based on input validation
+    /// Updates login button state based on input validation.
     /// </summary>
     private void UpdateLoginButtonState()
     {
@@ -214,8 +259,9 @@ public partial class Main : Node3D
     }
 
     /// <summary>
-    /// Show error message to the user and disable login button
+    /// Displays an error message to the user.
     /// </summary>
+    /// <param name="message">The error message to display.</param>
     private void ShowErrorMessage(string message)
     {
         hasError = true;
@@ -225,7 +271,7 @@ public partial class Main : Node3D
     }
 
     /// <summary>
-    /// Clear error state and hide error label
+    /// Clears the error state and hides the error label.
     /// </summary>
     private void ClearError()
     {
