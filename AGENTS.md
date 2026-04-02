@@ -215,6 +215,220 @@ res://
 
 ---
 
+## C# Documentation Standards
+
+**All code you produce must follow these documentation standards without exception.**
+
+### 1. XML Documentation Comments
+
+Use `///` (triple-slash) XML comments above **every** member: `public`, `protected`, `internal`, **and `private`**.
+
+#### Required Tags by Member Type
+
+| Member Type | Required Tags |
+|-------------|---------------|
+| Class / Struct / Interface / Enum | `<summary>` |
+| Method | `<summary>`, `<param>` (one per param), `<returns>` (if non-void), `<exception>` (one per thrown type) |
+| Property | `<summary>`, `<value>` |
+| Field | `<summary>` |
+| Enum member | `<summary>` |
+| Generic type | `<summary>`, `<typeparam>` (one per type param) |
+| Delegate / Event | `<summary>` |
+
+#### Optional Tags (Use When Relevant)
+
+| Tag | When to Use |
+|-----|-------------|
+| `<remarks>` | Caveats, edge cases, game rule references, implementation notes |
+| `<example>` + `<code>` | Non-obvious usage patterns |
+| `<see cref=""/>` | Inline cross-reference to another type or member |
+| `<seealso cref=""/>` | Related types or methods |
+| `<inheritdoc/>` | When inheriting docs from a base class or interface — only if the inherited doc is complete and accurate |
+
+### 2. Summary Writing Rules
+
+1. **Start with a verb** in third-person present tense: "Calculates", "Returns", "Validates", "Tracks"
+2. **Describe the contract**, not the implementation: what it does, not how
+3. **Never write** "This method does X" or "This class is Y" — just write "Does X" or "Represents Y"
+4. **Be specific about return values**: state what `true`/`false`, `null`, or specific values mean
+5. **Keep `<summary>` to 1–3 sentences**. Use `<remarks>` for anything longer
+
+#### Good
+
+```csharp
+/// <summary>
+/// Attempts to equip an item to the player, enforcing slot restrictions per §9.3.
+/// Returns <c>false</c> if the player does not meet race, class, or slot requirements.
+/// </summary>
+```
+
+#### Bad
+
+```csharp
+/// <summary>
+/// This method equips an item.
+/// </summary>
+```
+
+### 3. Private Member Documentation
+Private members must be documented. Follow these additional guidelines:
+
+**Fields**: document why the field exists, its invariants, and when it resets or changes
+**Methods**: document who calls them and under what conditions
+**Nested classes/enums**: document fully, these are the hardest to revisit later
+
+#### Example
+```csharp
+/// <summary>
+/// Tracks whether the Halfling flee reroll ability has been consumed
+/// this combat. Reset to <c>false</c> at the start of each combat.
+/// </summary>
+private bool _hasUsedFleeReroll;
+
+/// <summary>
+/// Validates that the player's equipment slots are consistent after
+/// a race change. Unequips items that violate the new race's restrictions.
+/// Called internally by <see cref="ApplyRaceChange"/>.
+/// </summary>
+/// <param name="player">The player whose equipment to revalidate.</param>
+/// <remarks>
+/// Per §9.3 and §14.3: losing a race immediately invalidates
+/// race-restricted equipment. Items move to carried state, not discarded.
+/// </remarks>
+private void RevalidateEquipmentSlots(PlayerState player)
+```
+
+### 4. Game Rule References
+This project implements the card game Munchkin. A rules specification document exists and is the single source of truth for all game logic.
+
+**Always cite the relevant section** when implementing game logic: `Per §8.6`, `See §14.5`
+Place rule references in `<remarks>`, not `<summary>`
+If multiple rules interact, cite all of them
+If a rule is ambiguous or not covered, **flag it with a comment rather than improvising**
+
+```csharp
+/// <remarks>
+/// Per §8.6: flee is resolved independently per monster when facing multiple.
+/// Per §14.5: Halflings may reroll a failed flee once per combat.
+/// </remarks>
+```
+
+### 5. Inline Comments
+Use `//` comments inside method bodies sparingly and only to explain why, never what.
+
+#### When to Use
+
+Non-obvious business logic: `// Per §9.4, unequipped items become "carried" — still in play, no bonus`
+Workarounds: `// Godot 4.6 WebSocketPeer requires polling in _Process — not event-driven`
+Intent behind a non-obvious choice: `// Using strictly-greater-than per §8.4 — tie means defeat`
+
+#### When NOT to Use
+
+```csharp
+// Don't do this:
+int total = 0; // initialize total to zero
+```
+
+### 6. TODO / FIXME / HACK Comments
+
+Use structured annotations with context:
+
+```csharp
+// TODO(#42): Handle reconnection edge case where player dies during disconnect
+// FIXME: Race condition if two curses resolve simultaneously — needs server-side lock
+// HACK: Godot signal emission order is non-deterministic here, forcing a one-frame delay
+```
+
+Always include **why** it's deferred, **what** the risk is, or a **ticket/issue number**
+Never leave a bare `// TODO` with no explanation
+
+### 7. Enum Documentation
+
+Every enum and every member gets a `<summary>`:
+
+```csharp
+/// <summary>
+/// Represents the phases of a player's turn per §7.
+/// </summary>
+public enum TurnPhase
+{
+    /// <summary>
+    /// The player opens the top card of the dungeon deck face-up.
+    /// </summary>
+    OpenDoor,
+
+    /// <summary>
+    /// The player plays a monster from hand to fight voluntarily.
+    /// Only available if no monster was encountered during <see cref="OpenDoor"/>.
+    /// </summary>
+    LookForTrouble,
+
+    /// <summary>
+    /// The player draws a face-down dungeon card into hand.
+    /// Only available if no combat occurred this turn.
+    /// </summary>
+    LootRoom,
+
+    /// <summary>
+    /// The player must reduce hand size to 5 or fewer cards by giving
+    /// excess cards to the lowest-level player. Per §12.
+    /// </summary>
+    Charity
+}
+```
+
+### 8. Signal and Export Documentation (Godot-Specific)
+
+```csharp
+/// <summary>
+/// Emitted when a card is played from the local player's hand.
+/// Listeners should send the corresponding <c>PLAY_CARD</c> WebSocket message.
+/// </summary>
+/// <param name="cardId">The unique ID of the played card.</param>
+/// <param name="targetPlayerId">
+/// The target player's UUID, or <c>null</c> if the card has no target.
+/// </param>
+[Signal]
+public delegate void CardPlayedEventHandler(string cardId, string? targetPlayerId);
+
+/// <summary>
+/// The maximum number of cards a player may hold at end of turn before
+/// Charity triggers. Per §12, this is always 5 in the base game.
+/// </summary>
+[Export]
+public int MaxHandSize { get; set; } = 5;
+```
+
+### 9. Checklist — Apply to Every Code Block You Produce
+
+```
+✅  Every class, struct, interface, enum has <summary>
+✅  Every method has <summary>, <param>, <returns>, <exception> as applicable
+✅  Every property has <summary> and <value> if non-obvious
+✅  Every field (including private) has <summary>
+✅  Every enum member has <summary>
+✅  Summaries start with a verb, describe the contract, not the implementation
+✅  <returns> specifies what true/false/null mean
+✅  <remarks> used for caveats, edge cases, game rule references
+✅  Game rule sections cited (§7, §8.6, §14, etc.) in <remarks>
+✅  Private fields document why they exist and their invariants
+✅  Private methods document who calls them
+✅  Inline comments explain WHY, not WHAT
+✅  No bare TODO/FIXME without explanation
+✅  No commented-out code without explanation
+✅  No "this method does X" phrasing
+✅  Signals document what listeners should do
+✅  [Export] properties document valid ranges and defaults
+```
+
+### 10. Exceptions to These Rules
+
+- **Trivial backing fields** behind a fully-documented public property may skip docs: private int _level; behind a documented public int Level
+- `override` **methods** may use <inheritdoc/> if the base documentation is complete
+- **Test classes and test methods** follow a lighter standard: <summary> only, describing what scenario is tested
+
+---
+
 ## When Responding
 
 1. **Start with the smallest testable step**. Don't architect a whole system before writing a line of code. Build incrementally.
