@@ -69,21 +69,8 @@ public partial class GameStateMachine
     // Constructor
     public GameStateMachine() { }
 
-    // State transitions
-    public void TransitionToPhase(MainGamePhase newPhase)
+    private void ApplyNewPhase(MainGamePhase newPhase)
     {
-        if (CurrentPhase == newPhase)
-            return;
-
-        // Validate transition (basic rules)
-        bool isValid = IsValidTransition(CurrentPhase, newPhase);
-
-        if (!isValid)
-        {
-            GD.PrintErr($"Invalid state transition: {CurrentPhase} -> {newPhase}");
-            return;
-        }
-
         CurrentPhase = newPhase;
         OnPhaseChanged?.Invoke(newPhase);
 
@@ -108,34 +95,31 @@ public partial class GameStateMachine
         }
     }
 
+    // State transitions
+    public void TransitionToPhase(MainGamePhase newPhase)
+    {
+        if (CurrentPhase == newPhase)
+            return;
+
+        // Validate transition (basic rules)
+        bool isValid = IsValidTransition(CurrentPhase, newPhase);
+
+        if (!isValid)
+        {
+            GD.PrintErr($"Invalid state transition: {CurrentPhase} -> {newPhase}");
+            return;
+        }
+
+        ApplyNewPhase(newPhase);
+    }
+
     // Set phase directly (for server updates)
     public void SetPhase(MainGamePhase newPhase)
     {
         if (CurrentPhase == newPhase)
             return;
 
-        CurrentPhase = newPhase;
-        OnPhaseChanged?.Invoke(newPhase);
-
-        // Handle phase-specific initialization
-        switch (newPhase)
-        {
-            case MainGamePhase.TurnStart:
-                // Reset combat state at start of turn
-                CurrentCombat = null;
-                CurrentCombatPhase = CombatPhase.None;
-                break;
-
-            case MainGamePhase.Combat:
-                // Initialize combat if not already
-                if (CurrentCombat == null)
-                {
-                    CurrentCombat = new CombatState();
-                    CurrentCombatPhase = CombatPhase.InteractionWindow;
-                    OnCombatPhaseChanged?.Invoke(CombatPhase.InteractionWindow);
-                }
-                break;
-        }
+        ApplyNewPhase(newPhase);
     }
 
     public void TransitionToCombatPhase(CombatPhase newPhase)
