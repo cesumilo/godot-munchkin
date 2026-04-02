@@ -1,16 +1,17 @@
 # Munchkin Game WebSocket Protocol Specification
 
 ## Overview
-This document defines the WebSocket message protocol for real-time lobby management and gameplay communication between the Munchkin game server and clients. The WebSocket endpoint is `/lobby/{id}/ws` (authenticated with JWT).
+
+This document defines the WebSocket message protocol for real-time gameplay communication between the Munchkin game server and clients. The current WebSocket endpoint is `/lobby/{id}/ws?token=<jwt>`.
 
 ## Connection Lifecycle
 1. **Authentication**: Client authenticates via HTTP `POST /auth/login` to get JWT
-2. **Connection**: Client connects to `ws://{host}:1337/lobby/{id}/ws?token={jwt_token}` with JWT in query parameter
+2. **Connection**: Client connects to `ws://{host}:1337/lobby/{id}/ws?token=<jwt>`
 3. **Lobby Join**: Upon connection, server sends `LOBBY_STATE` with current lobby status
 4. **Lobby Management**: Players can set ready status, chat, and host can change settings/kick players
 5. **Game Start**: Host or automatic trigger starts game → server sends `GAME_STARTING` countdown → `GAME_STARTED` with initial state
 6. **Gameplay**: Real-time messages flow via WebSocket
-7. **Disconnection**: Client reconnects using same JWT, receives `LOBBY_STATE` (if in lobby) or `GAME_STATE` (if in game)
+5. **Disconnection**: Client reconnects using same JWT while the in-memory room still exists. Recovery after room loss is not supported in this MVP.
 
 ## Message Format
 All messages are JSON objects with a `type` field and `data` payload:
@@ -238,7 +239,7 @@ These messages are sent by clients while in the lobby.
 
 ## Server → Client Messages (Gameplay)
 ```json
-// Full game state (on connection or major change)
+// Full game state (on connection and after important room updates)
 {
   "type": "GAME_STATE",
   "data": {
@@ -412,75 +413,25 @@ interface LobbyState {
 }
 ```
 
-### Card Types (from §4 of game rules)
-```typescript
-interface CardBase {
-  id: string;
-  name: string;
-  description: string;
-  deck_type: "DUNGEON" | "TREASURE";
-}
-
-interface MonsterCard extends CardBase {
-  type: "MONSTER";
-  level: number;
-  bonus_against_race?: "ELF" | "DWARF" | "HALFLING";
-  bonus_against_class?: "WARRIOR" | "THIEF" | "MAGE" | "CLERIC";
-  bonus_value: number;
-  flee_penalty: "LOSE_LEVEL" | "LOSE_ITEM" | "DEATH" | "CURSE";
-  flee_modifier: number;
-  treasures: number;
-  levels_gained: number;
-}
-
-interface ItemCard extends CardBase {
-  type: "ITEM";
-  bonus: number;
-  gold_value: number;  // multiple of 100
-  size: "NORMAL" | "BIG";
-  slot: "HEAD" | "ARMOR" | "FOOT" | "HAND_1" | "HAND_2" | "TWO_HANDS" | "NONE";
-  race_restriction?: "ELF" | "DWARF" | "HALFLING";
-  class_restriction?: "WARRIOR" | "THIEF" | "MAGE" | "CLERIC";
-  sex_restriction?: "MALE" | "FEMALE";
-}
-
-interface CurseCard extends CardBase {
-  type: "CURSE";
-  effect: "LOSE_HEADGEAR" | "LOSE_LEVEL" | "CHANGE_SEX" | "LOSE_RACE";
-}
-
-interface RaceCard extends CardBase {
-  type: "RACE";
-  race: "ELF" | "DWARF" | "HALFLING";
-}
-
-interface ClassCard extends CardBase {
-  type: "CLASS";
-  class: "WARRIOR" | "THIEF" | "MAGE" | "CLERIC";
-}
-
-interface ActionCard extends CardBase {
-  type: "ACTION";
-  playable_when: "DURING_YOUR_TURN" | "DURING_COMBAT" | "ANYTIME" | "IN_RESPONSE";
-}
-```
-
 ### Player State (from §5 of game rules)
+
+**Note:** Cards are referenced by their unique `card_id` string. Card data (stats, effects, etc.) is loaded from local card database on both client and server.
+
 ```typescript
 interface PlayerState {
   id: string;
   name: string;
   level: number;  // 1-10
-  race: RaceCard | null;
-  race2: RaceCard | null;  // only if hybrid_race
-  class: ClassCard | null;
-  class2: ClassCard | null;  // only if hybrid_class
+  race_card_id: string | null;  // card ID of equipped race, null = Human
+  race2_card_id: string | null;  // only if has_hybrid_race
+  class_card_id: string | null;  // card ID of equipped class, null = none
+  class2_card_id: string | null;  // only if has_hybrid_class
   sex: "MALE" | "FEMALE";
   has_hybrid_race: boolean;
   has_hybrid_class: boolean;
-  equipment: EquipmentSlot[];
-  carried_items: ItemCard[];  // items in play but not equipped
-  hand: string[];  // card IDs
+  equipment: EquipmentSlot[];  // equipped items referenced by card_id
+  carried_item_ids: string[];  // items in play but not equipped
+  hand: string[];  // card IDs in hand
   is_dead: boolean;
 }
 
@@ -490,6 +441,13 @@ interface EquipmentSlot {
   is_big_item: boolean;
 }
 ```
+
+### Card References
+
+All cards in game state messages are referenced by their unique `card_id` string (e.g., `"monster_goblin_001"`, `"item_broad_sword_001"`). The client maintains a local card database loaded from `Resources/Cards/Definitions/`. The server maintains its own card database. This ensures:
+- Network messages remain small (just IDs, not full card objects)
+- Both client and server agree on card definitions
+- Cards can be cached locally and looked up by ID
 
 ## Sequence Examples
 
@@ -661,6 +619,7 @@ type WebSocketMessage struct {
 5. **Handle game start transition** from lobby UI to game board
 
 ## Version History
+- **v1.2** (2025-04-02): Removed card data structures from protocol - cards now referenced only by unique ID. Client and server maintain separate card databases. Removed JOIN_GAME message (joining is implicit via WebSocket connection + JWT).
 - **v1.1** (2025-03-25): Added lobby events and management messages
 - **v1.0** (2024-03-13): Initial protocol specification based on Munchkin game rules document v2.0
 
