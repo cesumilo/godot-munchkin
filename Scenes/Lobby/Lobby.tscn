@@ -1,6 +1,6 @@
 [gd_scene format=3 uid="uid://bdgxjbio54788"]
 
-[ext_resource type="Script" uid="uid://cvk4b8kby0g1v" path="res://Scripts/UI/Lobby.cs" id="1_d3f5s"]
+[ext_resource type="Script" uid="uid://hn4luc31q2yl" path="res://Scripts/UI/Lobby.cs" id="1_d3f5s"]
 
 [node name="Lobby" type="Node3D" unique_id=44172842]
 script = ExtResource("1_d3f5s")
@@ -15,11 +15,6 @@ grow_vertical = 2
 
 [node name="PlayerCountLabel" type="Label" parent="UI" unique_id=1421908812]
 layout_mode = 1
-anchors_preset = 6
-anchor_left = 0.0
-anchor_top = 0.0
-anchor_right = 0.0
-anchor_bottom = 0.0
 offset_left = 20.0
 offset_top = 20.0
 offset_right = 220.0
@@ -31,11 +26,6 @@ text = "Player: Unknown"
 
 [node name="StatusLabel" type="Label" parent="UI" unique_id=1352762861]
 layout_mode = 1
-anchors_preset = 6
-anchor_left = 0.0
-anchor_top = 0.0
-anchor_right = 0.0
-anchor_bottom = 0.0
 offset_left = 20.0
 offset_top = 60.0
 offset_right = 500.0
@@ -47,28 +37,17 @@ text = "Connecting..."
 
 [node name="LobbyList" type="ItemList" parent="UI" unique_id=1845395164]
 layout_mode = 1
-anchors_preset = 6
-anchor_left = 0.0
-anchor_top = 0.0
-anchor_right = 0.0
-anchor_bottom = 0.0
 offset_left = 20.0
 offset_top = 100.0
 offset_right = 500.0
 offset_bottom = 400.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_font_sizes/font_size = 16
-select_mode = 0
 size_flags_vertical = 3
+theme_override_font_sizes/font_size = 16
 
 [node name="CreateLobbyButton" type="Button" parent="UI" unique_id=2092426978]
 layout_mode = 1
-anchors_preset = 6
-anchor_left = 0.0
-anchor_top = 0.0
-anchor_right = 0.0
-anchor_bottom = 0.0
 offset_left = 520.0
 offset_top = 100.0
 offset_right = 700.0
@@ -80,11 +59,6 @@ text = "Create Lobby"
 
 [node name="RefreshLobbyButton" type="Button" parent="UI" unique_id=319541213]
 layout_mode = 1
-anchors_preset = 6
-anchor_left = 0.0
-anchor_top = 0.0
-anchor_right = 0.0
-anchor_bottom = 0.0
 offset_left = 520.0
 offset_top = 150.0
 offset_right = 700.0
@@ -96,11 +70,6 @@ text = "Refresh"
 
 [node name="JoinLobbyButton" type="Button" parent="UI" unique_id=1468304889]
 layout_mode = 1
-anchors_preset = 6
-anchor_left = 0.0
-anchor_top = 0.0
-anchor_right = 0.0
-anchor_bottom = 0.0
 offset_left = 520.0
 offset_top = 200.0
 offset_right = 700.0
@@ -112,11 +81,6 @@ text = "Join Lobby"
 
 [node name="StartGameButton" type="Button" parent="UI" unique_id=1352046748]
 layout_mode = 1
-anchors_preset = 6
-anchor_left = 0.0
-anchor_top = 0.0
-anchor_right = 0.0
-anchor_bottom = 0.0
 offset_left = 520.0
 offset_top = 250.0
 offset_right = 700.0
@@ -126,8 +90,8 @@ grow_vertical = 2
 theme_override_font_sizes/font_size = 16
 text = "Start Game"
 
+[connection signal="item_selected" from="UI/LobbyList" to="." method="OnLobbyListItemSelected"]
 [connection signal="pressed" from="UI/CreateLobbyButton" to="." method="OnCreateLobbyButtonPressed"]
 [connection signal="pressed" from="UI/RefreshLobbyButton" to="." method="OnRefreshLobbyButtonPressed"]
 [connection signal="pressed" from="UI/JoinLobbyButton" to="." method="OnJoinLobbyButtonPressed"]
 [connection signal="pressed" from="UI/StartGameButton" to="." method="OnStartGameButtonPressed"]
-[connection signal="item_selected" from="UI/LobbyList" to="." method="OnLobbyListItemSelected"]

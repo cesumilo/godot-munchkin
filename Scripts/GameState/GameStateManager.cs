@@ -89,7 +89,7 @@ public partial class GameStateManager : Node
         StateMachine = new GameStateMachine();
 
         // Get network manager
-        _networkManager = GetNode<NetworkManager>("/root/NetworkManager");
+        _networkManager = GetNode<NetworkManager>("/root/Autoload/NetworkManager");
 
         if (_networkManager == null)
         {

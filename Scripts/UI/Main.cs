@@ -35,6 +35,11 @@ public partial class Main : Node3D
     public static string PlayerId { get; private set; } = "";
 
     /// <summary>
+    /// Gets the authenticated player name.
+    /// </summary>
+    public static string PlayerName { get; private set; } = "Player";
+
+    /// <summary>
     /// Initializes UI elements and sets up error label styling.
     /// </summary>
     public override void _Ready()
@@ -213,6 +218,7 @@ public partial class Main : Node3D
         // In a real implementation, we would parse the JWT token to get the user ID
         // For now, we'll use the username as player ID
         PlayerId = usernameText;
+        PlayerName = usernameText;
         GD.Print($"Player ID set to: {PlayerId}");
     }
 

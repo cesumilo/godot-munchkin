@@ -358,6 +358,16 @@ public partial class Lobby : Node3D
             return;
         }
 
+        // Check if mock server mode is enabled
+        if (NetworkManager.Instance?.UseMockServer == true)
+        {
+            GameLogger.Info("Mock server: starting game", this);
+            ShowStatus("Starting game (mock)...", false);
+            // Trigger mock server to start game
+            NetworkManager.Instance.InitializeMockGame();
+            return;
+        }
+
         ExecuteRequest(
             ServerUrls.StartGame(lobbyId),
             HttpClient.Method.Post,
@@ -383,6 +393,14 @@ public partial class Lobby : Node3D
         if (networkManager == null || networkManager.WebSocketClient == null)
         {
             ShowStatus("Network manager not available.", true);
+            return;
+        }
+
+        // Check if mock server mode is enabled
+        if (networkManager.UseMockServer)
+        {
+            GameLogger.Info("Mock server enabled - initializing mock lobby", this);
+            InitializeMockLobby(lobbyId);
             return;
         }
 
@@ -431,6 +449,78 @@ public partial class Lobby : Node3D
         {
             GameLogger.Info("WebSocket connection started successfully", this);
         }
+    }
+
+    /// <summary>
+    /// Initializes mock lobby for local testing.
+    /// </summary>
+    /// <param name="lobbyId">The lobby ID.</param>
+    private void InitializeMockLobby(string lobbyId)
+    {
+        var networkManager = NetworkManager.Instance;
+
+        // Create mock player list
+        var players = new List<MessageProtocol.LobbyPlayerData>
+        {
+            new()
+            {
+                Id = Main.PlayerId,
+                Name = Main.PlayerName,
+                IsHost = _isHost,
+                IsReady = false,
+                Avatar = "",
+            },
+        };
+
+        // Add mock bot players
+        if (_isHost)
+        {
+            players.Add(
+                new()
+                {
+                    Id = "player_bot_1",
+                    Name = "Bot 1",
+                    IsHost = false,
+                    IsReady = true,
+                    Avatar = "",
+                }
+            );
+            players.Add(
+                new()
+                {
+                    Id = "player_bot_2",
+                    Name = "Bot 2",
+                    IsHost = false,
+                    IsReady = true,
+                    Avatar = "",
+                }
+            );
+        }
+
+        // Initialize mock lobby
+        networkManager.InitializeMockLobby(lobbyId, Main.PlayerId, players);
+
+        // Subscribe to mock messages
+        networkManager.WebSocketClient.MessageReceived -= OnWebSocketMessageReceived;
+        networkManager.WebSocketClient.MessageReceived += OnWebSocketMessageReceived;
+
+        ShowStatus("Connected to mock lobby", false);
+        GameLogger.Info("Mock lobby initialized", this);
+
+        // Update UI
+        UpdateUIForLobbyState();
+    }
+
+    /// <summary>
+    /// Updates UI based on lobby state (mock or real).
+    /// </summary>
+    private void UpdateUIForLobbyState()
+    {
+        // Update buttons based on host status
+        _startGameButton.Visible = _isHost;
+        _startGameButton.Disabled = false;
+
+        ShowStatus(_isHost ? "You are the host (mock)" : "Waiting for host to start (mock)", false);
     }
 
     /// <summary>
@@ -687,8 +777,15 @@ public partial class Lobby : Node3D
         GameLogger.Info($"Join lobby response: {responseBody}", this);
 
         ShowStatus("Successfully joined lobby!", false);
+
+        // Only reset host status if we're joining a different lobby
+        // (not when auto-joining our own created lobby)
+        if (_currentLobbyId != _selectedLobbyId)
+        {
+            _isHost = false;
+        }
+
         _currentLobbyId = _selectedLobbyId;
-        _isHost = false;
 
         GameLogger.Debug(
             $"After join - Current lobby ID: {_currentLobbyId}, IsHost: {_isHost}",
@@ -737,6 +834,21 @@ public partial class Lobby : Node3D
 
         switch (messageType)
         {
+            case MessageProtocol.LOBBY_STATE:
+                HandleLobbyStateMessage(data);
+                break;
+            case MessageProtocol.PLAYER_JOINED:
+                HandlePlayerJoinedMessage(data);
+                break;
+            case MessageProtocol.PLAYER_READY_CHANGE:
+                HandlePlayerReadyChangeMessage(data);
+                break;
+            case MessageProtocol.GAME_STARTING:
+                HandleGameStartingMessage(data);
+                break;
+            case MessageProtocol.GAME_STARTED:
+                HandleGameStartedMessage(data);
+                break;
             case MessageProtocol.GAME_STATE:
                 HandleGameStateMessage(data);
                 break;
@@ -747,6 +859,61 @@ public partial class Lobby : Node3D
                 GameLogger.Debug($"Unhandled message type: {messageType}", this);
                 break;
         }
+    }
+
+    /// <summary>
+    /// Parses LOBBY_STATE message from server.
+    /// </summary>
+    /// <param name="data">Message data dictionary.</param>
+    private void HandleLobbyStateMessage(Godot.Collections.Dictionary data)
+    {
+        GameLogger.Debug("Received LOBBY_STATE message", this);
+        ShowStatus("Lobby state updated", false);
+    }
+
+    /// <summary>
+    /// Parses PLAYER_JOINED message from server.
+    /// </summary>
+    /// <param name="data">Message data dictionary.</param>
+    private void HandlePlayerJoinedMessage(Godot.Collections.Dictionary data)
+    {
+        string playerId = data.ContainsKey("player_id") ? (string)data["player_id"] : "";
+        string playerName = data.ContainsKey("name") ? (string)data["name"] : "";
+        GameLogger.Info($"Player joined: {playerName} ({playerId})", this);
+        ShowStatus($"{playerName} joined the lobby", false);
+    }
+
+    /// <summary>
+    /// Parses PLAYER_READY_CHANGE message from server.
+    /// </summary>
+    /// <param name="data">Message data dictionary.</param>
+    private void HandlePlayerReadyChangeMessage(Godot.Collections.Dictionary data)
+    {
+        string playerId = data.ContainsKey("player_id") ? (string)data["player_id"] : "";
+        bool isReady = data.ContainsKey("is_ready") && (bool)data["is_ready"];
+        GameLogger.Info($"Player ready change: {playerId} = {isReady}", this);
+    }
+
+    /// <summary>
+    /// Parses GAME_STARTING message from server.
+    /// </summary>
+    /// <param name="data">Message data dictionary.</param>
+    private void HandleGameStartingMessage(Godot.Collections.Dictionary data)
+    {
+        int countdown = data.ContainsKey("countdown") ? (int)(long)data["countdown"] : 5;
+        GameLogger.Info($"Game starting in {countdown} seconds", this);
+        ShowStatus($"Game starting in {countdown}...", false);
+    }
+
+    /// <summary>
+    /// Parses GAME_STARTED message from server.
+    /// </summary>
+    /// <param name="data">Message data dictionary.</param>
+    private void HandleGameStartedMessage(Godot.Collections.Dictionary data)
+    {
+        GameLogger.Info("Game started - transitioning to game scene", this);
+        ShowStatus("Game started!", false);
+        TransitionToGame();
     }
 
     private void OnWebSocketError(string errorMessage)
