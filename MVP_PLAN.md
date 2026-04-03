@@ -10,22 +10,24 @@ A player can complete one full turn cycle on screen, driven by mock server messa
 
 | System | Status | Key Files |
 |--------|--------|-----------|
-| Auth (login, JWT) | Done | `Scripts/UI/Main.cs`, `Scenes/Main/Main.tscn` |
-| Lobby (list/create/join via HTTP) | Done | `Scripts/UI/Lobby.cs`, `Scenes/Lobby/Lobby.tscn` — HTTP API calls only, no WebSocket lobby events |
-| WebSocketClient | Done | `Scripts/Networking/WebSocketClient.cs` — poll, send, receive, reconnect, message queue |
-| NetworkManager (autoload) | Done | `Scripts/Networking/NetworkManager.cs` — singleton, `ConnectToLobby()`, `SendPlayerAction()`, `SendPlayCard()` |
-| MessageProtocol | Partially done | `Scripts/Networking/MessageProtocol.cs` — missing lobby message types per updated PROTOCOL.md |
-| Card data model | Done | `Scripts/Cards/CardData.cs`, `ItemCardData.cs`, `MonsterCardData.cs`, `CurseCardData.cs`, `RaceCardData.cs`, `ClassCardData.cs`, `ActionCardData.cs`, `Enums.cs` |
-| CardFactory (autoload) | Done | `Scripts/Cards/CardFactory.cs` — loads `.tres` from `Resources/Cards/Definitions/`, lookup by ID/type |
-| CardVisual (simple 3D) | Done | `Scripts/Cards/CardVisual.cs` — color-coded mesh + labels |
-| PlayerState | Done | `Scripts/GameState/PlayerState.cs` — level, race, class, equip/unequip, hand, slot validation |
-| GameStateMachine | Done | `Scripts/GameState/GameStateMachine.cs` — phase enum, transitions, combat state, player management |
-| GameStateManager (autoload) | Done | `Scripts/GameState/GameStateManager.cs` — bridges WS messages → state machine, parses `GAME_STATE`/`TURN_PHASE_CHANGE`/`COMBAT_START`/`ERROR` |
-| EquipmentPanel + DragDrop | Done | `Scripts/UI/EquipmentPanel.cs`, `Scripts/UI/DragDropHandler.cs` — 3D equipment drag-and-drop |
-| Card3D plugin (GDScript) | Available | `addons/card_3d/` — Card3D, CardCollection3D, DragController, layouts (Line/Fan/Pile) |
-| Sample .tres cards | 12 cards | 2 monsters, 2 items, 1 curse, 2 races, 2 classes, 2 actions, 1 test card |
-| Game Board scene | Missing | No `Scenes/Game/` directory exists |
-| **Lobby WebSocket Events** | **Missing** | Need `LOBBY_STATE`, `PLAYER_JOINED`, `GAME_STARTING`, etc. as defined in PROTOCOL.md v1.1 |
+| Auth (login, JWT) | **Done** | `Scripts/UI/Main.cs`, `Scenes/Main/Main.tscn` |
+| Lobby (list/create/join via HTTP) | **Done** | `Scripts/UI/Lobby.cs`, `Scenes/Lobby/Lobby.tscn` — HTTP API calls only, no WebSocket lobby events |
+| WebSocketClient | **Done** | `Scripts/Networking/WebSocketClient.cs` — poll, send, receive, reconnect, message queue, `InjectMessage()` for mock |
+| NetworkManager (autoload) | **Done** | `Scripts/Networking/NetworkManager.cs` — singleton with `UseMockServer` toggle, `ConnectToLobby()`, `SendPlayerAction()`, `SendPlayCard()`, mock routing |
+| MessageProtocol | **Done** | `Scripts/Networking/MessageProtocol.cs` — all lobby + game message types, parsers, builders per PROTOCOL.md v1.2 |
+| MockServer | **Done** | `Scripts/Networking/MockServer.cs` — full game simulation, deck management, turn flow, combat resolution, bot players |
+| Card data model | **Done** | `Scripts/Cards/CardData.cs`, `ItemCardData.cs`, `MonsterCardData.cs`, `CurseCardData.cs`, `RaceCardData.cs`, `ClassCardData.cs`, `ActionCardData.cs`, `Enums.cs` |
+| CardFactory (autoload) | **Done** | `Scripts/Cards/CardFactory.cs` — loads `.tres` from `Resources/Cards/Definitions/`, lookup by ID/type |
+| CardVisual (simple 3D) | **Done** | `Scripts/Cards/CardVisual.cs` — color-coded mesh + labels |
+| PlayerState | **Done** | `Scripts/GameState/PlayerState.cs` — level, race, class, equip/unequip, hand, slot validation |
+| GameStateMachine | **Done** | `Scripts/GameState/GameStateMachine.cs` — phase enum, transitions, combat state, player management |
+| GameStateManager (autoload) | **Done** | `Scripts/GameState/GameStateManager.cs` — bridges WS messages → state machine, parses `GAME_STATE`/`TURN_PHASE_CHANGE`/`COMBAT_START`/`ERROR` |
+| EquipmentPanel + DragDrop | **Done** | `Scripts/UI/EquipmentPanel.cs`, `Scripts/UI/DragDropHandler.cs` — 3D equipment drag-and-drop, validated via DragDropTest |
+| Card3D plugin (GDScript) | **Available** | `addons/card_3d/` — Card3D, CardCollection3D, DragController, layouts (Line/Fan/Pile) |
+| Sample .tres cards | **12 cards** | 2 monsters, 2 items, 1 curse, 2 races, 2 classes, 2 actions, 1 test card |
+| Game Board scene | **Missing** | No `Scenes/Game/` directory exists — **NEXT STEP** |
+| **Lobby WebSocket Events** | **Done** | `LOBBY_STATE`, `PLAYER_JOINED`, `PLAYER_READY_CHANGE`, `GAME_STARTING`, `GAME_STARTED` — all implemented |
+| **MunchkinCard3D** | **In Progress** | Need `Scripts/Cards/munchkin_card_3d.gd` + `Scenes/Game/MunchkinCard3D.tscn` + `MunchkinCardHelper.cs` |
 
 ## Card3D Plugin API (GDScript — called from C# via Godot node API)
 

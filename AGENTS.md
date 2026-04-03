@@ -470,10 +470,17 @@ public int MaxHandSize { get; set; } = 5;
 
 ## Current Project Status
 
-- **Stage**: MVP implementation planned - ready to implement first gameplay loop per MVP_PLAN.md
+- **Stage**: **Mock server complete** - Login → Lobby → Game Start flow working end-to-end. Ready for GameBoard scene implementation.
 - **Experience level**: Junior C# dev, junior Godot, new to multiplayer networking
-- **Server technology**: Golang Server handling both HTTP and WebSocket at ws://90.28.104.14:1337
-- **Implementation Plan**: See `MVP_PLAN.md` for the 7-step implementation plan for the first gameplay loop
+- **Server technology**: Golang Server (HTTP) + MockServer (WebSocket simulation) with toggle via `NetworkManager.UseMockServer`
+- **Implementation Plan**: See `MVP_PLAN.md` for the 7-step implementation plan
+- **Recent Completion (2025-04-03)**: MockServer fully implemented with:
+  - Lobby state management (LOBBY_STATE, PLAYER_JOINED, PLAYER_READY_CHANGE)
+  - Game initialization with deck building and card dealing
+  - Turn flow: OPEN_DOOR → COMBAT/LOOK_FOR_TROUBLE → LOOT_ROOM → CHARITY → END_TURN
+  - Combat resolution with flee/fight mechanics
+  - Bot auto-play for non-local players
+  - All PROTOCOL.md v1.2 message types supported
 - **Important discoveries from implementation**:
   1. **3D Coordinate system**: X is horizontal (-X=left, +X=right), Y is vertical (+Y=up, -Y=down), Z is depth (-Z=forward, +Z=backward). Camera faces -Z.
   2. **Existing Card3D plugin**: Use /addons/card_3d/ for 3D card visuals
@@ -481,6 +488,8 @@ public int MaxHandSize { get; set; } = 5;
   4. **Raycast detection**: Drop zone Area3D nodes have thin CollisionShape3D (Z height only 0.1 units) - raycast must start above shapes
   5. **Metadata system**: Using `SetMeta("slot", value)` on Area3D nodes to identify slot types (0-6)
   6. **Slot validation**: Updated `PlayerState.IsSlotAvailable()` to count hand slots instead of exact matching
+  7. **Mock server pattern**: Route messages through NetworkManager which conditionally uses MockServer or real WebSocketClient via `InjectMessage()`
+  8. **Lobby host status**: When creating a lobby, host flag must NOT be reset when auto-joining own lobby
 
 ---
 
