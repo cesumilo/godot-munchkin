@@ -864,13 +864,14 @@ GameBoard (Node3D, script: GameBoard.cs)
 ```
 
 ### Camera Setup
-Following the Card3D plugin's example (`example_battle/battle.tscn`), the camera looks along -Z toward Z=0. Cards exist in the XY plane at various Z values. The `DragController.card_drag_plane` is set to `Plane(Vector3(0,0,1), z_value)` — cards move in XY while Z determines stacking.
+Per AGENTS.md: X is horizontal (-X=left, +X=right), Y is vertical (+Y=up, -Y=down), Z is depth (-Z=forward, +Z=backward). Camera should face -Z (toward negative Z).
 
-However, our project uses Z as vertical (per AGENTS.md discovery). The Card3D example camera is at `(0, 0, 9)` looking down the -Z axis, with cards at Z ~2-3. We need to either:
-- **(A)** Match the example's coordinate system for the game board (camera at Z=12, cards at Z=3, drag plane `Plane(0,0,1, 3)`)
-- **(B)** Adapt to our Z-up system
+The Card3D plugin's example (`example_battle/battle.tscn`) uses a different coordinate system where camera looks along -Z. We need to adapt to our coordinate system:
+- Camera at `(0, 2, 5)` looking toward `(0, 2, 0)` — faces -Z (into the screen)
+- Cards exist in the X/Y plane at various Z depths
+- Drag plane set to `Plane(Vector3(0,0,1), z_value)` for dragging at specific Z depth
 
-**Decision**: Use option **(A)** for the game board — match the Card3D plugin's coordinate expectations exactly. The Card3D plugin layouts use X/Y axes for card positioning and Z for stacking. The existing equipment panel's Z-up system is a separate concern that doesn't conflict since it's a different scene.
+**Decision**: Use our coordinate system consistently throughout the project. Camera faces -Z, X is left/right, Y is up/down.
 
 ### Files to Create
 

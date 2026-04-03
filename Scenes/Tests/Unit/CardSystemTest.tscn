@@ -1,0 +1,6 @@
+[gd_scene format=3 uid="uid://deygnflbhctyn"]
+
+[ext_resource type="Script" uid="uid://c4jej0idkau6n" path="res://Tests/Unit/CardSystemTestLogic.cs" id="1_872mw"]
+
+[node name="CardSystemTest" type="Node" unique_id=121381916]
+script = ExtResource("1_872mw")

@@ -135,15 +135,12 @@ public partial class PlayerState
             int total = Level;
 
             // Add equipment bonuses from CardFactory
-            if (CardFactory.Instance != null)
+            foreach (var equipmentId in WornEquipmentIds)
             {
-                foreach (var equipmentId in WornEquipmentIds)
+                var item = CardFactory.Instance?.GetCardById<ItemCardData>(equipmentId);
+                if (item != null)
                 {
-                    var item = CardFactory.Instance.GetCardById<ItemCardData>(equipmentId);
-                    if (item != null)
-                    {
-                        total += item.Bonus;
-                    }
+                    total += item.Bonus;
                 }
             }
 
@@ -229,6 +226,24 @@ public partial class PlayerState
             return true;
 
         // Count occupied hand slots
+        var (occupiedHandSlots, hasTwoHandedItem) = CountOccupiedHandSlots();
+
+        // Check slot availability
+        return item.Slot switch
+        {
+            EquipmentSlot.TwoHands => occupiedHandSlots == 0,
+            EquipmentSlot.Hand1 or EquipmentSlot.Hand2 => !hasTwoHandedItem
+                && occupiedHandSlots < 2,
+            _ => !IsBodySlotOccupied(item.Slot),
+        };
+    }
+
+    /// <summary>
+    /// Counts occupied hand slots from worn equipment.
+    /// </summary>
+    /// <returns>A tuple containing (occupiedHandSlots, hasTwoHandedItem).</returns>
+    private (int occupiedHandSlots, bool hasTwoHandedItem) CountOccupiedHandSlots()
+    {
         int occupiedHandSlots = 0;
         bool hasTwoHandedItem = false;
 
@@ -240,43 +255,34 @@ public partial class PlayerState
                 if (wornItem.Slot == EquipmentSlot.TwoHands)
                 {
                     hasTwoHandedItem = true;
-                    occupiedHandSlots += 2; // Two-handed occupies both
+                    occupiedHandSlots += 2;
                 }
-                else if (
-                    wornItem.Slot == EquipmentSlot.Hand1
-                    || wornItem.Slot == EquipmentSlot.Hand2
-                )
+                else if (wornItem.Slot is EquipmentSlot.Hand1 or EquipmentSlot.Hand2)
                 {
                     occupiedHandSlots += 1;
                 }
             }
         }
 
-        // Check slot availability
-        if (item.Slot == EquipmentSlot.TwoHands)
+        return (occupiedHandSlots, hasTwoHandedItem);
+    }
+
+    /// <summary>
+    /// Checks if a body slot (Head, Armor, Feet) is already occupied.
+    /// </summary>
+    /// <param name="slot">The slot to check.</param>
+    /// <returns>True if occupied; false otherwise.</returns>
+    private bool IsBodySlotOccupied(EquipmentSlot slot)
+    {
+        foreach (var wornId in WornEquipmentIds)
         {
-            // Two-handed item needs both hand slots free
-            return occupiedHandSlots == 0;
-        }
-        else if (item.Slot == EquipmentSlot.Hand1 || item.Slot == EquipmentSlot.Hand2)
-        {
-            // One-handed item needs at least one hand slot free
-            // And no two-handed item equipped
-            return !hasTwoHandedItem && occupiedHandSlots < 2;
-        }
-        else
-        {
-            // Head, Armor, Foot - check if slot already occupied
-            foreach (var wornId in WornEquipmentIds)
+            var wornItem = GetItemData(wornId);
+            if (wornItem != null && wornItem.Slot == slot)
             {
-                var wornItem = GetItemData(wornId);
-                if (wornItem != null && wornItem.Slot == item.Slot)
-                {
-                    return false;
-                }
+                return true;
             }
-            return true;
         }
+        return false;
     }
 
     /// <summary>
@@ -299,7 +305,7 @@ public partial class PlayerState
         foreach (var wornId in WornEquipmentIds)
         {
             var wornItem = GetItemData(wornId);
-            if (wornItem != null && wornItem.Size == ItemSize.Big)
+            if (wornItem?.Size == ItemSize.Big)
                 bigItemCount++;
         }
 
@@ -415,10 +421,7 @@ public partial class PlayerState
     /// <returns>The <see cref="ItemCardData"/> if found; <c>null</c> otherwise.</returns>
     public ItemCardData GetItemData(string cardId)
     {
-        if (CardFactory.Instance == null)
-            return null;
-
-        return CardFactory.Instance.GetCardById<ItemCardData>(cardId);
+        return CardFactory.Instance?.GetCardById<ItemCardData>(cardId);
     }
 
     /// <summary>
@@ -428,10 +431,7 @@ public partial class PlayerState
     /// <returns>The <see cref="CardData"/> if found; <c>null</c> otherwise.</returns>
     public CardData GetCardData(string cardId)
     {
-        if (CardFactory.Instance == null)
-            return null;
-
-        return CardFactory.Instance.GetCardById(cardId);
+        return CardFactory.Instance?.GetCardById(cardId);
     }
 
     /// <summary>
@@ -443,10 +443,7 @@ public partial class PlayerState
     public T GetCardData<T>(string cardId)
         where T : CardData
     {
-        if (CardFactory.Instance == null)
-            return null;
-
-        return CardFactory.Instance.GetCardById<T>(cardId);
+        return CardFactory.Instance?.GetCardById<T>(cardId);
     }
 
     /// <summary>
@@ -459,15 +456,12 @@ public partial class PlayerState
     public int GetEquipmentBonus()
     {
         int bonus = 0;
-        if (CardFactory.Instance != null)
+        foreach (var equipmentId in WornEquipmentIds)
         {
-            foreach (var equipmentId in WornEquipmentIds)
+            var item = GetItemData(equipmentId);
+            if (item != null)
             {
-                var item = GetItemData(equipmentId);
-                if (item != null)
-                {
-                    bonus += item.Bonus;
-                }
+                bonus += item.Bonus;
             }
         }
         return bonus;
@@ -480,15 +474,12 @@ public partial class PlayerState
     public List<ItemCardData> GetWornEquipment()
     {
         var result = new List<ItemCardData>();
-        if (CardFactory.Instance != null)
+        foreach (var equipmentId in WornEquipmentIds)
         {
-            foreach (var equipmentId in WornEquipmentIds)
+            var item = GetItemData(equipmentId);
+            if (item != null)
             {
-                var item = GetItemData(equipmentId);
-                if (item != null)
-                {
-                    result.Add(item);
-                }
+                result.Add(item);
             }
         }
         return result;
@@ -501,15 +492,12 @@ public partial class PlayerState
     public List<ItemCardData> GetCarriedEquipment()
     {
         var result = new List<ItemCardData>();
-        if (CardFactory.Instance != null)
+        foreach (var equipmentId in CarriedEquipmentIds)
         {
-            foreach (var equipmentId in CarriedEquipmentIds)
+            var item = GetItemData(equipmentId);
+            if (item != null)
             {
-                var item = GetItemData(equipmentId);
-                if (item != null)
-                {
-                    result.Add(item);
-                }
+                result.Add(item);
             }
         }
         return result;

@@ -188,7 +188,7 @@ res://
 - Use `double delta` (Godot 4 uses double, not float)
 - Godot 4.6 API only — no Godot 3.x patterns
 - PascalCase for public members, `_camelCase` for private fields
-- **3D Coordinate System**: Z is vertical (up/down), Y is depth (forward/backward relative to camera), X is horizontal (left/right). Camera-dependent: movement uses camera basis vectors (X=right, Y=forward, Z=up)
+- **3D Coordinate System**: X is horizontal (left/right, -X=left, +X=right), Y is vertical (up/down, +Y=up, -Y=down), Z is depth (forward/backward, -Z=forward, +Z=backward). Camera should face -Z (toward negative Z).
 
 ### Networking Code
 - Use `Godot.HttpRequest` node or `System.Net.Http.HttpClient` for HTTP calls
@@ -475,7 +475,7 @@ public int MaxHandSize { get; set; } = 5;
 - **Server technology**: Golang Server handling both HTTP and WebSocket at ws://90.28.104.14:1337
 - **Implementation Plan**: See `MVP_PLAN.md` for the 7-step implementation plan for the first gameplay loop
 - **Important discoveries from implementation**:
-  1. **3D Coordinate system**: Z is vertical, Y is depth (camera-dependent) - crucial for drag movement
+  1. **3D Coordinate system**: X is horizontal (-X=left, +X=right), Y is vertical (+Y=up, -Y=down), Z is depth (-Z=forward, +Z=backward). Camera faces -Z.
   2. **Existing Card3D plugin**: Use /addons/card_3d/ for 3D card visuals
   3. **DragDropHandler implementation**: Drag parent node (CardVisual), not the DragDropHandler node itself
   4. **Raycast detection**: Drop zone Area3D nodes have thin CollisionShape3D (Z height only 0.1 units) - raycast must start above shapes

@@ -1,0 +1,6 @@
+[gd_scene format=3 uid="uid://6kmc76l6dp1v"]
+
+[ext_resource type="Script" uid="uid://dn1qb46xrb5mg" path="res://Tests/Unit/SlotDebugTestLogic.cs" id="1_aghx0"]
+
+[node name="SlotDebugTest" type="Node" unique_id=752327338]
+script = ExtResource("1_aghx0")

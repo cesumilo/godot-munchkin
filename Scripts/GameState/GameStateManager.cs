@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Text.Json;
 using Godot;
 
 /// <summary>
@@ -47,18 +46,36 @@ public partial class GameStateManager : Node
     /// <summary>
     /// Emitted when the local player's state is updated.
     /// </summary>
-    /// <param name="player">The updated player state.</param>
     public event Action<PlayerState> OnLocalPlayerUpdated;
 
     /// <summary>
     /// Emitted when an error occurs.
     /// </summary>
-    /// <param name="message">The error message.</param>
     public event Action<string> OnError;
 
     // Network integration
     private NetworkManager _networkManager;
     private WebSocketClient _webSocketClient;
+
+    // Message handler dictionary
+    private readonly Dictionary<string, Action<Godot.Collections.Dictionary>> _messageHandlers;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="GameStateManager"/> class.
+    /// </summary>
+    public GameStateManager()
+    {
+        // Initialize message handlers dictionary
+        _messageHandlers = new Dictionary<string, Action<Godot.Collections.Dictionary>>
+        {
+            [MessageProtocol.GAME_STATE] = HandleGameStateMessage,
+            [MessageProtocol.PLAYER_UPDATE] = HandlePlayerUpdateMessage,
+            [MessageProtocol.TURN_PHASE_CHANGE] = HandleTurnPhaseChangeMessage,
+            [MessageProtocol.COMBAT_START] = HandleCombatStartMessage,
+            [MessageProtocol.COMBAT_RESOLUTION] = HandleCombatResolutionMessage,
+            [MessageProtocol.ERROR] = HandleErrorMessage,
+        };
+    }
 
     /// <summary>
     /// Initializes the GameStateManager when entering the scene tree.
@@ -76,7 +93,7 @@ public partial class GameStateManager : Node
 
         if (_networkManager == null)
         {
-            GD.PrintErr("[GameStateManager] NetworkManager not found in autoloads!");
+            GameLogger.Error("NetworkManager not found in autoloads!", this);
             return;
         }
 
@@ -85,7 +102,7 @@ public partial class GameStateManager : Node
 
         if (_webSocketClient == null)
         {
-            GD.PrintErr("[GameStateManager] WebSocketClient not found!");
+            GameLogger.Error("WebSocketClient not found!", this);
             return;
         }
 
@@ -93,7 +110,7 @@ public partial class GameStateManager : Node
         _webSocketClient.MessageReceived += HandleNetworkMessage;
         _webSocketClient.ErrorOccurred += HandleConnectionError;
 
-        GD.Print("[GameStateManager] Initialized");
+        GameLogger.Info("Initialized", this);
     }
 
     /// <summary>
@@ -120,38 +137,13 @@ public partial class GameStateManager : Node
     /// </remarks>
     private void HandleNetworkMessage(string messageType, Godot.Collections.Dictionary data)
     {
-        GD.Print($"[GameStateManager] Received message: {messageType}");
+        GameLogger.Debug($"Received message: {messageType}", this);
 
-        switch (messageType)
+        if (_messageHandlers.TryGetValue(messageType, out var handler))
         {
-            case MessageProtocol.GAME_STATE:
-                HandleGameStateMessage(data);
-                break;
-
-            case MessageProtocol.PLAYER_UPDATE:
-                HandlePlayerUpdateMessage(data);
-                break;
-
-            case MessageProtocol.TURN_PHASE_CHANGE:
-                HandleTurnPhaseChangeMessage(data);
-                break;
-
-            case MessageProtocol.COMBAT_START:
-                HandleCombatStartMessage(data);
-                break;
-
-            case MessageProtocol.COMBAT_RESOLUTION:
-                HandleCombatResolutionMessage(data);
-                break;
-
-            case MessageProtocol.ERROR:
-                HandleErrorMessage(data);
-                break;
-
-            default:
-                // Ignore other message types
-                break;
+            handler(data);
         }
+        // Unknown message types are silently ignored
     }
 
     /// <summary>
@@ -166,7 +158,7 @@ public partial class GameStateManager : Node
     {
         try
         {
-            GD.Print("[GameStateManager] Processing GAME_STATE message");
+            GameLogger.Debug("Processing GAME_STATE message", this);
 
             // Parse using MessageProtocol
             if (MessageProtocol.TryParseGameState(data, out var gameState))
@@ -176,12 +168,12 @@ public partial class GameStateManager : Node
             }
             else
             {
-                GD.PrintErr("[GameStateManager] Failed to parse GAME_STATE message");
+                GameLogger.Error("Failed to parse GAME_STATE message", this);
             }
         }
         catch (Exception ex)
         {
-            GD.PrintErr($"[GameStateManager] Error handling GAME_STATE: {ex.Message}");
+            GameLogger.Exception(ex, "Error handling GAME_STATE", this);
         }
     }
 
@@ -212,7 +204,6 @@ public partial class GameStateManager : Node
                         StateMachine.Players.Add(player);
 
                         // Check if this is the local player
-                        // TODO: Get local player ID from authentication
                         if (LocalPlayerId == string.Empty || player.PlayerId == LocalPlayerId)
                         {
                             LocalPlayer = player;
@@ -227,7 +218,6 @@ public partial class GameStateManager : Node
         // Parse current turn
         if (serverState.CurrentTurn != null)
         {
-            // TODO: Parse turn phase and active player
             if (serverState.CurrentTurn.ContainsKey("player_id"))
             {
                 string activePlayerId = (string)serverState.CurrentTurn["player_id"];
@@ -254,12 +244,12 @@ public partial class GameStateManager : Node
         // Parse combat state
         if (serverState.Combat != null)
         {
-            // TODO: Parse combat state
-            GD.Print("[GameStateManager] Combat state received (not yet implemented)");
+            GameLogger.Debug("Combat state received (not yet implemented)", this);
         }
 
-        GD.Print(
-            $"[GameStateManager] Updated state: {StateMachine.Players.Count} players, phase: {StateMachine.CurrentPhase}"
+        GameLogger.Debug(
+            $"Updated state: {StateMachine.Players.Count} players, phase: {StateMachine.CurrentPhase}",
+            this
         );
     }
 
@@ -278,76 +268,55 @@ public partial class GameStateManager : Node
             var player = new PlayerState();
 
             // Basic fields
-            if (playerData.ContainsKey("id"))
-                player.PlayerId = (string)playerData["id"];
-
-            if (playerData.ContainsKey("name"))
-                player.PlayerName = (string)playerData["name"];
-
-            if (playerData.ContainsKey("level"))
-                player.Level = (int)playerData["level"];
+            player.PlayerId = JsonHelper.GetString(playerData, "id");
+            player.PlayerName = JsonHelper.GetString(playerData, "name", "Unknown");
+            player.Level = JsonHelper.GetInt(playerData, "level", 1);
 
             // Race
-            if (playerData.ContainsKey("race"))
-            {
-                string raceStr = (string)playerData["race"];
-                if (Enum.TryParse<RaceType>(raceStr, true, out var race))
-                    player.PrimaryRace = race;
-            }
+            string raceStr = JsonHelper.GetString(playerData, "race");
+            if (
+                !string.IsNullOrEmpty(raceStr)
+                && Enum.TryParse<RaceType>(raceStr, true, out var race)
+            )
+                player.PrimaryRace = race;
 
             // Class
-            if (playerData.ContainsKey("class"))
-            {
-                string classStr = (string)playerData["class"];
-                if (Enum.TryParse<ClassType>(classStr, true, out var playerClass))
-                    player.PrimaryClass = playerClass;
-            }
+            string classStr = JsonHelper.GetString(playerData, "class");
+            if (
+                !string.IsNullOrEmpty(classStr)
+                && Enum.TryParse<ClassType>(classStr, true, out var playerClass)
+            )
+                player.PrimaryClass = playerClass;
 
             // Sex
-            if (playerData.ContainsKey("sex"))
-            {
-                string sexStr = (string)playerData["sex"];
-                if (Enum.TryParse<SexType>(sexStr, true, out var sex))
-                    player.Sex = sex;
-            }
+            string sexStr = JsonHelper.GetString(playerData, "sex");
+            if (!string.IsNullOrEmpty(sexStr) && Enum.TryParse<SexType>(sexStr, true, out var sex))
+                player.Sex = sex;
 
             // Hand cards
-            if (
-                playerData.ContainsKey("hand")
-                && playerData["hand"].VariantType == Variant.Type.Array
-            )
+            var handArray = JsonHelper.GetArray(playerData, "hand");
+            foreach (var cardId in handArray)
             {
-                var handArray = playerData["hand"].AsGodotArray();
-                foreach (var cardId in handArray)
-                {
-                    if (cardId.VariantType == Variant.Type.String)
-                        player.AddToHand((string)cardId);
-                }
+                if (cardId.VariantType == Variant.Type.String)
+                    player.AddToHand((string)cardId);
             }
 
             // Equipment (simplified - server might send as arrays of card IDs)
-            if (
-                playerData.ContainsKey("equipment")
-                && playerData["equipment"].VariantType == Variant.Type.Array
-            )
+            var equipArray = JsonHelper.GetArray(playerData, "equipment");
+            foreach (var cardId in equipArray)
             {
-                var equipArray = playerData["equipment"].AsGodotArray();
-                foreach (var cardId in equipArray)
-                {
-                    if (cardId.VariantType == Variant.Type.String)
-                        player.EquipItem((string)cardId);
-                }
+                if (cardId.VariantType == Variant.Type.String)
+                    player.EquipItem((string)cardId);
             }
 
             // Status
-            if (playerData.ContainsKey("is_dead"))
-                player.IsDead = (bool)playerData["is_dead"];
+            player.IsDead = JsonHelper.GetBool(playerData, "is_dead");
 
             return player;
         }
         catch (Exception ex)
         {
-            GD.PrintErr($"[GameStateManager] Error parsing player data: {ex.Message}");
+            GameLogger.Exception(ex, "Error parsing player data", this);
             return null;
         }
     }
@@ -385,7 +354,7 @@ public partial class GameStateManager : Node
     {
         try
         {
-            GD.Print("[GameStateManager] Processing PLAYER_UPDATE message");
+            GameLogger.Debug("Processing PLAYER_UPDATE message", this);
 
             // Parse player data
             if (data.ContainsKey("player"))
@@ -415,13 +384,13 @@ public partial class GameStateManager : Node
                         StateMachine.Players.Add(updatedPlayer);
                     }
 
-                    GD.Print($"[GameStateManager] Updated player: {updatedPlayer.PlayerName}");
+                    GameLogger.Debug($"Updated player: {updatedPlayer.PlayerName}", this);
                 }
             }
         }
         catch (Exception ex)
         {
-            GD.PrintErr($"[GameStateManager] Error handling PLAYER_UPDATE: {ex.Message}");
+            GameLogger.Exception(ex, "Error handling PLAYER_UPDATE", this);
         }
     }
 
@@ -443,13 +412,13 @@ public partial class GameStateManager : Node
                     var mainPhase = MapTurnPhaseToMainPhase(turnPhase);
                     StateMachine.TransitionToPhase(mainPhase);
 
-                    GD.Print($"[GameStateManager] Turn phase changed to: {mainPhase}");
+                    GameLogger.Debug($"Turn phase changed to: {mainPhase}", this);
                 }
             }
         }
         catch (Exception ex)
         {
-            GD.PrintErr($"[GameStateManager] Error handling TURN_PHASE_CHANGE: {ex.Message}");
+            GameLogger.Exception(ex, "Error handling TURN_PHASE_CHANGE", this);
         }
     }
 
@@ -467,12 +436,12 @@ public partial class GameStateManager : Node
             if (MessageProtocol.TryParseCombatStart(data, out var combatStart))
             {
                 StateMachine.TransitionToPhase(GameStateMachine.MainGamePhase.Combat);
-                GD.Print("[GameStateManager] Combat started");
+                GameLogger.Debug("Combat started", this);
             }
         }
         catch (Exception ex)
         {
-            GD.PrintErr($"[GameStateManager] Error handling COMBAT_START: {ex.Message}");
+            GameLogger.Exception(ex, "Error handling COMBAT_START", this);
         }
     }
 
@@ -487,12 +456,12 @@ public partial class GameStateManager : Node
     {
         try
         {
-            GD.Print("[GameStateManager] Combat resolved");
+            GameLogger.Debug("Combat resolved", this);
             // TODO: Parse combat result and update players
         }
         catch (Exception ex)
         {
-            GD.PrintErr($"[GameStateManager] Error handling COMBAT_RESOLUTION: {ex.Message}");
+            GameLogger.Exception(ex, "Error handling COMBAT_RESOLUTION", this);
         }
     }
 
@@ -509,13 +478,13 @@ public partial class GameStateManager : Node
         {
             if (MessageProtocol.TryParseError(data, out var error))
             {
-                GD.PrintErr($"[GameStateManager] Server error: {error.Code} - {error.Message}");
+                GameLogger.Error($"Server error: {error.Code} - {error.Message}", this);
                 OnError?.Invoke(error.Message);
             }
         }
         catch (Exception ex)
         {
-            GD.PrintErr($"[GameStateManager] Error handling ERROR message: {ex.Message}");
+            GameLogger.Exception(ex, "Error handling ERROR message", this);
         }
     }
 
@@ -525,7 +494,7 @@ public partial class GameStateManager : Node
     /// <param name="error">The error message.</param>
     private void HandleConnectionError(string error)
     {
-        GD.PrintErr($"[GameStateManager] Connection error: {error}");
+        GameLogger.Error($"Connection error: {error}", this);
         OnError?.Invoke($"Connection error: {error}");
     }
 
@@ -538,7 +507,7 @@ public partial class GameStateManager : Node
     /// </remarks>
     public void TestWithMockData()
     {
-        GD.Print("[GameStateManager] Testing with mock data...");
+        GameLogger.Info("Testing with mock data...", this);
 
         // Create mock player data matching server format
         var mockPlayers = new Godot.Collections.Array
@@ -593,6 +562,6 @@ public partial class GameStateManager : Node
         // Process the mock state
         HandleGameStateMessage(mockGameState);
 
-        GD.Print($"[GameStateManager] Test complete. State: {StateMachine}");
+        GameLogger.Info($"Test complete. State: {StateMachine}", this);
     }
 }

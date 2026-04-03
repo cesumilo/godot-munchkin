@@ -477,7 +477,7 @@ public static class MessageProtocol
 
             if (parseError != Error.Ok)
             {
-                GD.PrintErr($"[MessageProtocol] Failed to parse JSON: {parseError}");
+                GameLogger.Error($"Failed to parse JSON: {parseError}", nameof(MessageProtocol));
                 return false;
             }
 
@@ -485,7 +485,7 @@ public static class MessageProtocol
 
             if (!parsedData.ContainsKey("type"))
             {
-                GD.PrintErr("[MessageProtocol] Message missing 'type' field");
+                GameLogger.Error("Message missing 'type' field", nameof(MessageProtocol));
                 return false;
             }
 
@@ -498,7 +498,7 @@ public static class MessageProtocol
         }
         catch (Exception ex)
         {
-            GD.PrintErr($"[MessageProtocol] Error parsing message: {ex.Message}");
+            GameLogger.Exception(ex, "Error parsing message", nameof(MessageProtocol));
             return false;
         }
     }
@@ -536,7 +536,7 @@ public static class MessageProtocol
         }
         catch (Exception ex)
         {
-            GD.PrintErr($"[MessageProtocol] Error parsing GAME_STATE: {ex.Message}");
+            GameLogger.Exception(ex, "Error parsing GAME_STATE", nameof(MessageProtocol));
             return false;
         }
     }
@@ -572,7 +572,7 @@ public static class MessageProtocol
         }
         catch (Exception ex)
         {
-            GD.PrintErr($"[MessageProtocol] Error parsing TURN_PHASE_CHANGE: {ex.Message}");
+            GameLogger.Exception(ex, "Error parsing TURN_PHASE_CHANGE", nameof(MessageProtocol));
             return false;
         }
     }
@@ -612,7 +612,7 @@ public static class MessageProtocol
         }
         catch (Exception ex)
         {
-            GD.PrintErr($"[MessageProtocol] Error parsing COMBAT_START: {ex.Message}");
+            GameLogger.Exception(ex, "Error parsing COMBAT_START", nameof(MessageProtocol));
             return false;
         }
     }
@@ -643,7 +643,7 @@ public static class MessageProtocol
         }
         catch (Exception ex)
         {
-            GD.PrintErr($"[MessageProtocol] Error parsing ERROR: {ex.Message}");
+            GameLogger.Exception(ex, "Error parsing ERROR", nameof(MessageProtocol));
             return false;
         }
     }
@@ -892,6 +892,6 @@ public static class MessageProtocol
 
         // CardFactory should be initialized and loaded with all card definitions
         // This is the preferred way to get card data - never send full card data over network
-        return CardFactory.GetCard(cardId);
+        return CardFactory.Instance.GetCardById(cardId);
     }
 }

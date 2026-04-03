@@ -1,0 +1,10 @@
+[gd_scene load_steps=2]
+
+[ext_resource type="Script" path="res://Tests/Integration/GameStateTest.cs" id="1_gamestate"]
+
+[node name="GameStateTest" type="Node"]
+script = ExtResource("1_gamestate")
+
+[node name="StatusLabel" type="Label3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, 0)
+text = "GameState Test Running..."

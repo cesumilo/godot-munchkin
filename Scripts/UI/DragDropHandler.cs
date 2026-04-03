@@ -418,7 +418,21 @@ public partial class DragDropHandler : Node3D
                         );
                         GD.Print($"    Enabled: {area.ProcessMode != ProcessModeEnum.Disabled}");
 
-                        var shape = area.GetChild<CollisionShape3D>(0);
+                        // Find CollisionShape3D among children instead of assuming index 0
+                        var shape = area.GetNodeOrNull<CollisionShape3D>("CollisionShape3D");
+                        if (shape == null)
+                        {
+                            // Try to find any CollisionShape3D child
+                            foreach (Node child in area.GetChildren())
+                            {
+                                if (child is CollisionShape3D foundShape)
+                                {
+                                    shape = foundShape;
+                                    break;
+                                }
+                            }
+                        }
+
                         GD.Print($"    Has CollisionShape: {shape != null}");
                         if (shape != null)
                         {

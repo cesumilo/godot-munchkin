@@ -1,6 +1,0 @@
-[gd_scene format=3 uid="uid://ffe1merlrdjy"]
-
-[ext_resource type="Script" path="res://Scripts/GameState/SlotDebugTest.cs" id="1"]
-
-[node name="SlotDebugTest" type="Node"]
-script = ExtResource("1")

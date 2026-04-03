@@ -1,0 +1,27 @@
+[gd_scene format=3 uid="uid://bia5nr01vpopk"]
+
+[ext_resource type="Script" uid="uid://hklkmnrni3nd" path="res://Tests/Smoke/DragDropTest.cs" id="1_dragdrop"]
+[ext_resource type="PackedScene" uid="uid://c50qy5ve6ybpb" path="res://Scenes/UI/CardVisual.tscn" id="2_7mqk1"]
+[ext_resource type="Resource" path="res://Resources/Cards/Definitions/Items/helm_of_courage.tres" id="3_cl1x2"]
+
+[node name="DragDropTest" type="Node3D" unique_id=546896646]
+script = ExtResource("1_dragdrop")
+_cardVisualScene = ExtResource("2_7mqk1")
+_cardData = ExtResource("3_cl1x2")
+
+[node name="Camera3D" type="Camera3D" parent="." unique_id=1060145069]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 5)
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="." unique_id=1135892402]
+transform = Transform3D(0.866025, -0.5, 0, 0.433013, 0.75, -0.5, 0.25, 0.433013, 0.866025, 0, 5, 5)
+shadow_enabled = true
+
+[node name="Instructions" type="Label3D" parent="." unique_id=993602676]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3, 0)
+billboard = 1
+text = "Drag card to colored zones
+Green = Valid slot (behind card)
+Red = Invalid
+Gray = Neutral
+X=left/right, Y=up/down, Z=depth"
+font_size = 20

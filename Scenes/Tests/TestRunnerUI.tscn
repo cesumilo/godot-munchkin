@@ -1,0 +1,134 @@
+[gd_scene format=3 uid="uid://dw6dfmym4yiyy"]
+
+[ext_resource type="Script" uid="uid://dopvsymiax7qk" path="res://Scenes/Tests/TestRunnerUI.cs" id="1_v7yoc"]
+
+[node name="TestRunnerUI" type="Control" unique_id=1000000000 node_paths=PackedStringArray("_smokeContainer", "_unitContainer", "_integrationContainer", "_runAllButton", "_runSmokeButton", "_runUnitButton", "_runIntegrationButton", "_summaryLabel", "_statusLabel", "_outputLog")]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_v7yoc")
+_smokeContainer = NodePath("VBoxContainer/CategoriesContainer/SmokeContainer")
+_unitContainer = NodePath("VBoxContainer/CategoriesContainer/UnitContainer")
+_integrationContainer = NodePath("VBoxContainer/CategoriesContainer/IntegrationContainer")
+_runAllButton = NodePath("VBoxContainer/ButtonRow/RunAllButton")
+_runSmokeButton = NodePath("VBoxContainer/ButtonRow/RunSmokeButton")
+_runUnitButton = NodePath("VBoxContainer/ButtonRow/RunUnitButton")
+_runIntegrationButton = NodePath("VBoxContainer/ButtonRow/RunIntegrationButton")
+_summaryLabel = NodePath("VBoxContainer/SummaryLabel")
+_statusLabel = NodePath("VBoxContainer/StatusLabel")
+_outputLog = NodePath("VBoxContainer/OutputLog")
+
+[node name="VBoxContainer" type="VBoxContainer" parent="." unique_id=1000000001]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 20.0
+offset_top = 20.0
+offset_right = -20.0
+offset_bottom = -20.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="HeaderLabel" type="Label" parent="VBoxContainer" unique_id=1000000002]
+layout_mode = 2
+theme_type_variation = &"HeaderLarge"
+text = "Munchkin Test Runner"
+horizontal_alignment = 1
+
+[node name="HSeparator" type="HSeparator" parent="VBoxContainer" unique_id=1000000003]
+layout_mode = 2
+
+[node name="ButtonRow" type="HBoxContainer" parent="VBoxContainer" unique_id=1000000004]
+layout_mode = 2
+
+[node name="RunAllButton" type="Button" parent="VBoxContainer/ButtonRow" unique_id=1000000005]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Run All Tests"
+
+[node name="RunSmokeButton" type="Button" parent="VBoxContainer/ButtonRow" unique_id=1000000006]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Run Smoke"
+
+[node name="RunUnitButton" type="Button" parent="VBoxContainer/ButtonRow" unique_id=1000000007]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Run Unit"
+
+[node name="RunIntegrationButton" type="Button" parent="VBoxContainer/ButtonRow" unique_id=1000000008]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Run Integration"
+
+[node name="HSeparator2" type="HSeparator" parent="VBoxContainer" unique_id=1000000009]
+layout_mode = 2
+
+[node name="StatusLabel" type="Label" parent="VBoxContainer" unique_id=1000000010]
+layout_mode = 2
+text = "Ready - Select tests to run"
+horizontal_alignment = 1
+
+[node name="HSeparator3" type="HSeparator" parent="VBoxContainer" unique_id=1000000011]
+layout_mode = 2
+
+[node name="CategoriesContainer" type="HBoxContainer" parent="VBoxContainer" unique_id=1000000012]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="SmokeContainer" type="VBoxContainer" parent="VBoxContainer/CategoriesContainer" unique_id=1000000013]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="SmokeHeader" type="Label" parent="VBoxContainer/CategoriesContainer/SmokeContainer" unique_id=1000000014]
+layout_mode = 2
+theme_type_variation = &"HeaderMedium"
+text = "Smoke Tests"
+horizontal_alignment = 1
+
+[node name="VSeparator" type="VSeparator" parent="VBoxContainer/CategoriesContainer" unique_id=1000000015]
+layout_mode = 2
+
+[node name="UnitContainer" type="VBoxContainer" parent="VBoxContainer/CategoriesContainer" unique_id=1000000016]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="UnitHeader" type="Label" parent="VBoxContainer/CategoriesContainer/UnitContainer" unique_id=1000000017]
+layout_mode = 2
+theme_type_variation = &"HeaderMedium"
+text = "Unit Tests"
+horizontal_alignment = 1
+
+[node name="VSeparator2" type="VSeparator" parent="VBoxContainer/CategoriesContainer" unique_id=1000000018]
+layout_mode = 2
+
+[node name="IntegrationContainer" type="VBoxContainer" parent="VBoxContainer/CategoriesContainer" unique_id=1000000019]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="IntegrationHeader" type="Label" parent="VBoxContainer/CategoriesContainer/IntegrationContainer" unique_id=1000000020]
+layout_mode = 2
+theme_type_variation = &"HeaderMedium"
+text = "Integration Tests"
+horizontal_alignment = 1
+
+[node name="HSeparator4" type="HSeparator" parent="VBoxContainer" unique_id=1000000021]
+layout_mode = 2
+
+[node name="OutputLog" type="RichTextLabel" parent="VBoxContainer" unique_id=1000000022]
+layout_mode = 2
+size_flags_vertical = 3
+bbcode_enabled = true
+text = "Test output will appear here..."
+
+[node name="HSeparator5" type="HSeparator" parent="VBoxContainer" unique_id=1000000023]
+layout_mode = 2
+
+[node name="SummaryLabel" type="Label" parent="VBoxContainer" unique_id=1000000024]
+layout_mode = 2
+text = "Total: 0 | Passed: 0 | Failed: 0 | Time: 0.0ms"
+horizontal_alignment = 1

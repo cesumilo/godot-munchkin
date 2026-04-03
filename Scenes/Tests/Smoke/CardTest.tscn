@@ -1,0 +1,73 @@
+[gd_scene format=3 uid="uid://dm1heea72icye"]
+
+[ext_resource type="Script" uid="uid://b3g8gc4bfay5h" path="res://Tests/Smoke/CardTest.cs" id="1_cardtest"]
+[ext_resource type="Script" uid="uid://dnmvktghdrq2d" path="res://Scripts/Cards/CardVisual.cs" id="2_cardvisual"]
+[ext_resource type="Resource" path="res://Resources/Cards/Definitions/Items/helm_of_courage.tres" id="3_lj7by"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_card"]
+albedo_color = Color(0.8, 0.8, 0.8, 1)
+
+[sub_resource type="BoxMesh" id="BoxMesh_card"]
+size = Vector3(0.7, 1, 0.01)
+
+[node name="CardTest" type="Node3D" unique_id=1182166520]
+script = ExtResource("1_cardtest")
+
+[node name="StatusLabel" type="Label3D" parent="." unique_id=2064858182]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, 0)
+text = "Loading cards..."
+
+[node name="CardVisual" type="Node3D" parent="." unique_id=1937692446]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
+script = ExtResource("2_cardvisual")
+_cardData = ExtResource("3_lj7by")
+
+[node name="CardMesh" type="MeshInstance3D" parent="CardVisual" unique_id=2095415655]
+material_override = SubResource("StandardMaterial3D_card")
+mesh = SubResource("BoxMesh_card")
+
+[node name="NameLabel" type="Label3D" parent="CardVisual/CardMesh" unique_id=788798552]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.3, 0.006)
+text = "Card Name"
+
+[node name="DescriptionLabel" type="Label3D" parent="CardVisual/CardMesh" unique_id=1009027042]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.2, 0.006)
+text = "Card Description"
+font_size = 16
+
+[node name="Camera3D" type="Camera3D" parent="." unique_id=1157183705]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 2.05)
+
+[node name="Control" type="Control" parent="." unique_id=237792307]
+layout_mode = 3
+anchors_preset = 0
+offset_right = 40.0
+offset_bottom = 40.0
+
+[node name="PreviousButton" type="Button" parent="Control" unique_id=1772599169]
+layout_mode = 0
+offset_left = 66.0
+offset_top = 615.0
+offset_right = 293.0
+offset_bottom = 679.0
+text = "Previous"
+
+[node name="NetworkTestButton" type="Button" parent="Control" unique_id=2026699264]
+layout_mode = 0
+offset_left = 518.0
+offset_top = 617.0
+offset_right = 745.0
+offset_bottom = 681.0
+text = "Network Test"
+
+[node name="NextButton" type="Button" parent="Control" unique_id=1730498853]
+layout_mode = 0
+offset_left = 982.0
+offset_top = 615.0
+offset_right = 1209.0
+offset_bottom = 679.0
+text = "Next"
+
+[connection signal="pressed" from="Control/PreviousButton" to="." method="OnPrevButtonPressed"]
+[connection signal="pressed" from="Control/NetworkTestButton" to="." method="OnTestNetworkButtonPressed"]
+[connection signal="pressed" from="Control/NextButton" to="." method="OnNextButtonPressed"]

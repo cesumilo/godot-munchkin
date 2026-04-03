@@ -125,7 +125,7 @@ public partial class EquipmentPanel : Node3D
         _gameStateManager = GameStateManager.Instance;
         if (_gameStateManager == null)
         {
-            GD.PrintErr("[EquipmentPanel] GameStateManager not found (check autoloads)");
+            GameLogger.Error("GameStateManager not found (check autoloads)", this);
             return;
         }
 
@@ -149,7 +149,7 @@ public partial class EquipmentPanel : Node3D
     public void SetPlayerState(PlayerState playerState)
     {
         bool isSameReference = _playerState == playerState;
-        GD.Print($"[EquipmentPanel] SetPlayerState called. Same reference? {isSameReference}");
+        GameLogger.Debug($"SetPlayerState called. Same reference? {isSameReference}", this);
 
         _playerState = playerState;
         UpdateDisplay();
@@ -161,7 +161,7 @@ public partial class EquipmentPanel : Node3D
     /// <param name="playerState">The updated player state.</param>
     private void UpdatePlayerState(PlayerState playerState)
     {
-        GD.Print("Called UpdatePlayerState !");
+        GameLogger.Debug("Called UpdatePlayerState!", this);
         SetPlayerState(playerState);
     }
 
@@ -216,30 +216,28 @@ public partial class EquipmentPanel : Node3D
     /// </summary>
     private void UpdateEquipmentSlots()
     {
-        GD.Print(
-            $"[EquipmentPanel] Updating equipment slots for player: {_playerState?.PlayerName}"
-        );
+        GameLogger.Debug($"Updating equipment slots for player: {_playerState?.PlayerName}", this);
 
         ClearEquipmentVisuals();
 
         var wornEquipment = _playerState.GetWornEquipment();
-        GD.Print($"[EquipmentPanel] Player has {wornEquipment.Count} worn items");
+        GameLogger.Debug($"Player has {wornEquipment.Count} worn items", this);
 
         foreach (var item in wornEquipment)
         {
-            GD.Print($"[EquipmentPanel] Item: {item.Name}, Slot: {item.Slot}, Bonus: {item.Bonus}");
+            GameLogger.Debug($"Item: {item.Name}, Slot: {item.Slot}, Bonus: {item.Bonus}", this);
 
             if (item.Slot != EquipmentSlot.None)
             {
                 Vector3 slotPos = GetSlotPosition(item.Slot);
-                GD.Print($"[EquipmentPanel] Creating visual at slot position: {slotPos}");
+                GameLogger.Debug($"Creating visual at slot position: {slotPos}", this);
                 CreateCardVisual(item, slotPos);
             }
             else
             {
                 Vector3 carriedPos =
                     _carriedEquipmentContainer?.GlobalTransform.Origin ?? Vector3.Zero;
-                GD.Print($"[EquipmentPanel] Creating visual in carried area: {carriedPos}");
+                GameLogger.Debug($"Creating visual in carried area: {carriedPos}", this);
                 CreateCardVisual(item, carriedPos);
             }
         }
@@ -333,7 +331,7 @@ public partial class EquipmentPanel : Node3D
 
         _cardVisuals[itemData.Id] = cardVisualInstance;
 
-        GD.Print($"[EquipmentPanel] Created card visual for: {itemData.Name} at {position}");
+        GameLogger.Debug($"Created card visual for: {itemData.Name} at {position}", this);
 
         AddDragDropHandler(cardVisualInstance, itemData, isWorn);
     }
@@ -445,11 +443,11 @@ public partial class EquipmentPanel : Node3D
 
         if (_playerState.CanEquipItem(itemId))
         {
-            GD.Print($"[EquipmentPanel] Requesting to equip: {itemId}");
+            GameLogger.Debug($"Requesting to equip: {itemId}", this);
             return true;
         }
 
-        GD.Print($"[EquipmentPanel] Cannot equip item: {itemId}");
+        GameLogger.Debug($"Cannot equip item: {itemId}", this);
         return false;
     }
 
@@ -465,7 +463,7 @@ public partial class EquipmentPanel : Node3D
 
         if (_playerState.WornEquipmentIds.Contains(itemId))
         {
-            GD.Print($"[EquipmentPanel] Requesting to unequip: {itemId}");
+            GameLogger.Debug($"Requesting to unequip: {itemId}", this);
             return true;
         }
 
@@ -498,7 +496,7 @@ public partial class EquipmentPanel : Node3D
         dragHandler.DragEnded += OnDragEnded;
         dragHandler.DroppedOnSlot += OnDroppedOnSlot;
         dragHandler.SetCardData(itemData.Id, itemData);
-        GD.Print($"[EquipmentPanel] Added drag handler to: {itemData.Name}");
+        GameLogger.Debug($"Added drag handler to: {itemData.Name}", this);
     }
 
     /// <summary>
@@ -507,7 +505,7 @@ public partial class EquipmentPanel : Node3D
     /// <param name="draggable">The dragged node.</param>
     private void OnDragStarted(Node3D draggable)
     {
-        GD.Print($"[EquipmentPanel] Drag started: {draggable.Name}");
+        GameLogger.Debug($"Drag started: {draggable.Name}", this);
     }
 
     /// <summary>
@@ -517,7 +515,7 @@ public partial class EquipmentPanel : Node3D
     /// <param name="position">Final position.</param>
     private void OnDragEnded(Node3D draggable, Vector3 position)
     {
-        GD.Print($"[EquipmentPanel] Drag ended at: {position}");
+        GameLogger.Debug($"Drag ended at: {position}", this);
     }
 
     /// <summary>
@@ -528,52 +526,52 @@ public partial class EquipmentPanel : Node3D
     private void OnDroppedOnSlot(Node3D draggable, int slotInt)
     {
         EquipmentSlot slot = (EquipmentSlot)slotInt;
-        GD.Print($"[EquipmentPanel] Dropped on slot: {slot}");
+        GameLogger.Debug($"Dropped on slot: {slot}", this);
 
         var dragHandler = draggable.GetNodeOrNull<DragDropHandler>(".");
         if (dragHandler == null)
         {
-            GD.PrintErr("[EquipmentPanel] No DragDropHandler found on draggable");
+            GameLogger.Error("No DragDropHandler found on draggable", this);
             return;
         }
 
         var cardVisual = draggable.GetParent() as CardVisual;
         if (cardVisual == null || cardVisual.CardData == null)
         {
-            GD.PrintErr("[EquipmentPanel] Could not get CardVisual or CardData from draggable");
+            GameLogger.Error("Could not get CardVisual or CardData from draggable", this);
             return;
         }
 
         var cardData = cardVisual.CardData;
-        GD.Print($"[EquipmentPanel] Found card data: {cardData.Name} (ID: {cardData.Id})");
+        GameLogger.Debug($"Found card data: {cardData.Name} (ID: {cardData.Id})", this);
 
         if (_playerState == null)
         {
-            GD.PrintErr("[EquipmentPanel] No PlayerState set on EquipmentPanel");
+            GameLogger.Error("No PlayerState set on EquipmentPanel", this);
             return;
         }
 
         bool isEquipped = _playerState.WornEquipmentIds.Contains(cardData.Id);
         bool isCarried = _playerState.CarriedEquipmentIds.Contains(cardData.Id);
-        GD.Print($"[EquipmentPanel] Item state: Equipped={isEquipped}, Carried={isCarried}");
+        GameLogger.Debug($"Item state: Equipped={isEquipped}, Carried={isCarried}", this);
 
         if (slot == EquipmentSlot.None)
         {
             if (isEquipped)
             {
-                GD.Print($"[EquipmentPanel] Attempting to unequip {cardData.Name}...");
+                GameLogger.Debug($"Attempting to unequip {cardData.Name}...", this);
                 bool success = _playerState.UnequipItem(cardData.Id);
-                GD.Print($"[EquipmentPanel] Unequip result: {success}");
+                GameLogger.Debug($"Unequip result: {success}", this);
             }
         }
         else if (isCarried)
         {
-            GD.Print($"[EquipmentPanel] Attempting to equip {cardData.Name}...");
+            GameLogger.Debug($"Attempting to equip {cardData.Name}...", this);
             bool success = _playerState.EquipItem(cardData.Id);
-            GD.Print($"[EquipmentPanel] Equip result: {success}");
+            GameLogger.Debug($"Equip result: {success}", this);
         }
 
         UpdatePlayerInfo();
-        GD.Print($"[EquipmentPanel] Bonus updated: {_playerState.TotalCombatBonus}");
+        GameLogger.Debug($"Bonus updated: {_playerState.TotalCombatBonus}", this);
     }
 }

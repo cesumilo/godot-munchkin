@@ -1,0 +1,25 @@
+[gd_scene load_steps=3]
+
+[ext_resource type="Script" path="res://Tests/Integration/EquipmentTest.cs" id="1_equipment"]
+[ext_resource type="PackedScene" uid="uid://byuwkicmjoqua" path="res://Scenes/UI/EquipmentPanel.tscn" id="2_panel"]
+
+[node name="EquipmentTest" type="Node3D"]
+script = ExtResource("1_equipment")
+
+[node name="StatusLabel" type="Label3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3, 0)
+text = "Equipment Test Loading..."
+font_size = 24
+
+[node name="InstructionsLabel" type="Label3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.7, 0)
+text = "Press E: equip helm, U: unequip sword, R: reset"
+font_size = 16
+
+[node name="EquipmentPanel" parent="." instance=ExtResource("2_panel")]
+
+[node name="Camera3D" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 5.05)
+
+[node name="OmniLight3D" type="OmniLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 3.22)

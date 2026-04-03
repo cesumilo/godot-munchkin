@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 using Godot;
 
@@ -27,10 +26,6 @@ public partial class WebSocketClient : Node
     private WebSocketPeer _webSocketPeer;
     private string _serverUrl = "";
     private bool _isConnecting = false;
-    private bool _isConnected = false;
-    private WebSocketPeer.State _lastState = WebSocketPeer.State.Closed;
-    private bool _lastIsConnecting = false;
-    private bool _lastIsConnected = false;
     private float _reconnectTimer = 0f;
     private const float RECONNECT_INTERVAL = 5f; // seconds
 
@@ -109,7 +104,7 @@ public partial class WebSocketClient : Node
         _instance = this;
         ProcessMode = ProcessModeEnum.Always; // Keep processing even when paused
 
-        GD.Print("[WebSocketClient] Initialized");
+        GameLogger.Info("Initialized", this);
     }
 
     /// <summary>
@@ -128,52 +123,34 @@ public partial class WebSocketClient : Node
 
         // Handle connection state
         var state = _webSocketPeer.GetReadyState();
-        bool wasConnected = _isConnected;
-        _isConnected = state == WebSocketPeer.State.Open;
-
-        // Only print state changes for debugging
-        if (
-            state != _lastState
-            || _isConnecting != _lastIsConnecting
-            || _isConnected != _lastIsConnected
-        )
-        {
-            GD.Print(
-                $"[WebSocketClient] State: {state}, IsConnecting: {_isConnecting}, IsConnected: {_isConnected}"
-            );
-            _lastState = state;
-            _lastIsConnecting = _isConnecting;
-            _lastIsConnected = _isConnected;
-        }
+        bool wasConnected = IsConnected();
+        bool isConnected = state == WebSocketPeer.State.Open;
 
         // Update connecting state based on actual WebSocket state
         if (state != WebSocketPeer.State.Connecting && _isConnecting)
         {
             _isConnecting = false;
-            GD.Print(
-                $"[WebSocketClient] Connection attempt finished (state={state}), setting _isConnecting=false"
-            );
+            GameLogger.Debug($"Connection attempt finished (state={state})", this);
         }
 
         // Fire connection state changed event if needed
-        if (wasConnected != _isConnected)
+        if (wasConnected != isConnected)
         {
-            GD.Print($"[WebSocketClient] Connection state changed: {_isConnected}");
-            ConnectionStateChanged?.Invoke(_isConnected);
+            GameLogger.Info($"Connection state changed: {isConnected}", this);
+            ConnectionStateChanged?.Invoke(isConnected);
 
-            if (_isConnected)
+            if (isConnected)
             {
                 LastConnectionTime = DateTime.Now;
-                GD.Print("[WebSocketClient] Connected successfully");
+                GameLogger.Info("Connected successfully", this);
 
                 // Send JOIN_GAME message with JWT token if available
                 SendJoinGameMessage();
-
                 ProcessMessageQueue(); // Start processing queued messages
             }
             else
             {
-                GD.Print("[WebSocketClient] Disconnected");
+                GameLogger.Info("Disconnected", this);
             }
         }
 
@@ -193,25 +170,24 @@ public partial class WebSocketClient : Node
             var code = _webSocketPeer.GetCloseCode();
             var reason = _webSocketPeer.GetCloseReason();
 
-            string errorMsg;
             if (code != -1)
             {
                 // Connection was closed by peer or with error code
-                errorMsg = $"[WebSocketClient] Connection closed: Code={code}, Reason={reason}";
-                GD.PrintErr(errorMsg);
+                string errorMsg = $"Connection closed: Code={code}, Reason={reason}";
+                GameLogger.Error(errorMsg, this);
                 ErrorOccurred?.Invoke(errorMsg);
             }
             else if (_isConnecting)
             {
                 // Connection failed during connect attempt
-                errorMsg = $"[WebSocketClient] Connection failed: Could not connect to server";
-                GD.PrintErr(errorMsg);
+                string errorMsg = "Connection failed: Could not connect to server";
+                GameLogger.Error(errorMsg, this);
                 ErrorOccurred?.Invoke(errorMsg);
             }
             else
             {
                 // Normal closure without error
-                GD.Print("[WebSocketClient] Connection closed normally");
+                GameLogger.Info("Connection closed normally", this);
             }
 
             // Attempt reconnect if we were connected before
@@ -221,7 +197,7 @@ public partial class WebSocketClient : Node
                 if (_reconnectTimer >= RECONNECT_INTERVAL)
                 {
                     _reconnectTimer = 0f;
-                    GD.Print("[WebSocketClient] Attempting to reconnect...");
+                    GameLogger.Info("Attempting to reconnect...", this);
                     ConnectToServer(_serverUrl);
                 }
             }
@@ -238,54 +214,44 @@ public partial class WebSocketClient : Node
     /// </remarks>
     public bool ConnectToServer(string url)
     {
-        GD.Print($"[WebSocketClient] ConnectToServer called with URL: {url}");
-        GD.Print(
-            $"[WebSocketClient] Current state: _isConnecting={_isConnecting}, _isConnected={_isConnected}, _webSocketPeer={_webSocketPeer}"
-        );
+        GameLogger.Debug($"ConnectToServer called with URL: {url}", this);
 
         if (_isConnecting)
         {
-            GD.Print("[WebSocketClient] Already connecting to server, returning false");
+            GameLogger.Debug("Already connecting to server, returning false", this);
             return false;
         }
 
         _serverUrl = url;
         _isConnecting = true;
-        _lastIsConnecting = false; // Reset to force state change print
-        GD.Print($"[WebSocketClient] Set _isConnecting=true");
 
         try
         {
-            GD.Print($"[WebSocketClient] Creating new WebSocketPeer and connecting to {url}");
+            GameLogger.Debug($"Creating new WebSocketPeer and connecting to {url}", this);
 
             // Create WebSocket peer
             _webSocketPeer = new WebSocketPeer();
 
-            // JWT token is included in the URL query parameter by NetworkManager
-
             // Connect to server
             Error error = _webSocketPeer.ConnectToUrl(url);
-            GD.Print($"[WebSocketClient] ConnectToUrl returned: {error}");
 
             if (error != Error.Ok)
             {
-                GD.PrintErr($"[WebSocketClient] Failed to start connection: {error}");
+                GameLogger.Error($"Failed to start connection: {error}", this);
                 ErrorOccurred?.Invoke($"Failed to start connection: {error}");
                 _isConnecting = false;
                 _webSocketPeer = null;
-                GD.Print($"[WebSocketClient] Connection failed, set _isConnecting=false");
                 return false;
             }
 
-            GD.Print("[WebSocketClient] Connection attempt started successfully");
+            GameLogger.Info("Connection attempt started successfully", this);
             return true;
         }
         catch (Exception ex)
         {
-            GD.PrintErr($"[WebSocketClient] Exception during connection: {ex.Message}");
+            GameLogger.Exception(ex, "Exception during connection", this);
             ErrorOccurred?.Invoke($"Connection exception: {ex.Message}");
             _isConnecting = false;
-            GD.Print($"[WebSocketClient] Exception, set _isConnecting=false");
             return false;
         }
     }
@@ -297,13 +263,12 @@ public partial class WebSocketClient : Node
     {
         if (_webSocketPeer != null)
         {
-            GD.Print("[WebSocketClient] Disconnecting from server");
+            GameLogger.Info("Disconnecting from server", this);
             _webSocketPeer.Close();
             _webSocketPeer = null;
         }
 
         _isConnecting = false;
-        _isConnected = false;
         _outgoingMessageQueue.Clear();
         _isProcessingQueue = false;
     }
@@ -317,7 +282,6 @@ public partial class WebSocketClient : Node
     public void ResetConnectionState()
     {
         _isConnecting = false;
-        _isConnected = false;
     }
 
     /// <summary>
@@ -328,7 +292,7 @@ public partial class WebSocketClient : Node
     /// <returns>True if message sent or queued successfully; false otherwise.</returns>
     public bool SendMessage(string message, bool queueIfDisconnected = true)
     {
-        if (_isConnected && _webSocketPeer != null)
+        if (IsConnected() && _webSocketPeer != null)
         {
             try
             {
@@ -338,21 +302,21 @@ public partial class WebSocketClient : Node
                 if (error == Error.Ok)
                 {
                     MessagesSent++;
-                    GD.Print(
-                        $"[WebSocketClient] Message sent: {message.Substring(0, Math.Min(50, message.Length))}..."
-                    );
+                    string preview =
+                        message.Length > 50 ? message.Substring(0, 50) + "..." : message;
+                    GameLogger.Debug($"Message sent: {preview}", this);
                     return true;
                 }
                 else
                 {
-                    GD.PrintErr($"[WebSocketClient] Failed to send message: {error}");
+                    GameLogger.Error($"Failed to send message: {error}", this);
                     ErrorOccurred?.Invoke($"Failed to send message: {error}");
                     return false;
                 }
             }
             catch (Exception ex)
             {
-                GD.PrintErr($"[WebSocketClient] Exception sending message: {ex.Message}");
+                GameLogger.Exception(ex, "Exception sending message", this);
                 ErrorOccurred?.Invoke($"Message send exception: {ex.Message}");
                 return false;
             }
@@ -361,13 +325,12 @@ public partial class WebSocketClient : Node
         {
             // Queue message for when we reconnect
             _outgoingMessageQueue.Enqueue(message);
-            GD.Print(
-                $"[WebSocketClient] Message queued (not connected): {message.Substring(0, Math.Min(50, message.Length))}..."
-            );
+            string preview = message.Length > 50 ? message.Substring(0, 50) + "..." : message;
+            GameLogger.Debug($"Message queued (not connected): {preview}", this);
             return true;
         }
 
-        GD.PrintErr("[WebSocketClient] Cannot send message: Not connected");
+        GameLogger.Error("Cannot send message: Not connected", this);
         return false;
     }
 
@@ -381,7 +344,7 @@ public partial class WebSocketClient : Node
     {
         if (string.IsNullOrEmpty(Main.PlayerId))
         {
-            GD.PrintErr("[WebSocketClient] Cannot send JOIN_GAME: PlayerId not available");
+            GameLogger.Error("Cannot send JOIN_GAME: PlayerId not available", this);
             return;
         }
 
@@ -406,12 +369,11 @@ public partial class WebSocketClient : Node
             };
 
             string jsonString = Json.Stringify(message);
-
             return SendMessage(jsonString);
         }
         catch (Exception ex)
         {
-            GD.PrintErr($"[WebSocketClient] Failed to create structured message: {ex.Message}");
+            GameLogger.Exception(ex, "Failed to create structured message", this);
             ErrorOccurred?.Invoke($"Message creation failed: {ex.Message}");
             return false;
         }
@@ -425,12 +387,12 @@ public partial class WebSocketClient : Node
     /// </remarks>
     private async void ProcessMessageQueue()
     {
-        if (_isProcessingQueue || !_isConnected)
+        if (_isProcessingQueue || !IsConnected())
             return;
 
         _isProcessingQueue = true;
 
-        while (_outgoingMessageQueue.Count > 0 && _isConnected)
+        while (_outgoingMessageQueue.Count > 0 && IsConnected())
         {
             string message = _outgoingMessageQueue.Dequeue();
 
@@ -459,16 +421,15 @@ public partial class WebSocketClient : Node
     {
         try
         {
-            GD.Print(
-                $"[WebSocketClient] Received: {message.Substring(0, Math.Min(100, message.Length))}..."
-            );
+            string preview = message.Length > 100 ? message.Substring(0, 100) + "..." : message;
+            GameLogger.Debug($"Received: {preview}", this);
 
             var json = new Json();
             Error parseError = json.Parse(message);
 
             if (parseError != Error.Ok)
             {
-                GD.PrintErr($"[WebSocketClient] Failed to parse JSON: {parseError}");
+                GameLogger.Error($"Failed to parse JSON: {parseError}", this);
                 ErrorOccurred?.Invoke($"Failed to parse server message: {parseError}");
                 return;
             }
@@ -477,7 +438,7 @@ public partial class WebSocketClient : Node
 
             if (!data.ContainsKey("type"))
             {
-                GD.PrintErr("[WebSocketClient] Message missing 'type' field");
+                GameLogger.Error("Message missing 'type' field", this);
                 ErrorOccurred?.Invoke("Server message missing 'type' field");
                 return;
             }
@@ -487,14 +448,14 @@ public partial class WebSocketClient : Node
                 ? data["data"].AsGodotDictionary()
                 : new Godot.Collections.Dictionary();
 
-            GD.Print($"[WebSocketClient] Parsed message type: {messageType}");
+            GameLogger.Debug($"Parsed message type: {messageType}", this);
 
             // Fire message received event
             MessageReceived?.Invoke(messageType, messageData);
         }
         catch (Exception ex)
         {
-            GD.PrintErr($"[WebSocketClient] Error handling message: {ex.Message}");
+            GameLogger.Exception(ex, "Error handling message", this);
             ErrorOccurred?.Invoke($"Message handling error: {ex.Message}");
         }
     }
@@ -505,9 +466,7 @@ public partial class WebSocketClient : Node
     /// <returns>True if connected and WebSocket is open; false otherwise.</returns>
     public bool IsConnected()
     {
-        return _isConnected
-            && _webSocketPeer != null
-            && _webSocketPeer.GetReadyState() == WebSocketPeer.State.Open;
+        return _webSocketPeer != null && _webSocketPeer.GetReadyState() == WebSocketPeer.State.Open;
     }
 
     /// <summary>
@@ -529,7 +488,7 @@ public partial class WebSocketClient : Node
         {
             ["messages_sent"] = MessagesSent,
             ["messages_received"] = MessagesReceived,
-            ["is_connected"] = _isConnected,
+            ["is_connected"] = IsConnected(),
             ["is_connecting"] = _isConnecting,
             ["queued_messages"] = _outgoingMessageQueue.Count,
             ["last_connection_time"] = LastConnectionTime.ToString("yyyy-MM-dd HH:mm:ss"),
@@ -549,6 +508,6 @@ public partial class WebSocketClient : Node
             _instance = null;
         }
 
-        GD.Print("[WebSocketClient] Cleaned up");
+        GameLogger.Info("Cleaned up", this);
     }
 }
