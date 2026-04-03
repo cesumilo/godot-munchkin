@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Godot;
 
 /// <summary>
@@ -35,6 +36,17 @@ public partial class NetworkManager : Node
     public const string SERVER_WS_BASE_URL = "ws://90.28.104.14:1337";
 
     /// <summary>
+    /// Gets or sets whether to use mock server for local testing.
+    /// </summary>
+    [Export]
+    public bool UseMockServer { get; set; } = false;
+
+    /// <summary>
+    /// The mock server instance for local testing.
+    /// </summary>
+    private MockServer _mockServer;
+
+    /// <summary>
     /// Initializes the NetworkManager singleton and WebSocket client.
     /// </summary>
     /// <remarks>
@@ -55,7 +67,63 @@ public partial class NetworkManager : Node
         WebSocketClient = new WebSocketClient();
         AddChild(WebSocketClient);
 
-        GD.Print("[NetworkManager] Initialized with WebSocket client");
+        // Initialize mock server if enabled
+        if (UseMockServer)
+        {
+            InitializeMockServer();
+        }
+
+        GD.Print($"[NetworkManager] Initialized (Mock: {UseMockServer})");
+    }
+
+    /// <summary>
+    /// Initializes the mock server for local testing.
+    /// </summary>
+    private void InitializeMockServer()
+    {
+        _mockServer = new MockServer();
+        _mockServer.OnServerMessage += OnMockServerMessage;
+        GD.Print("[NetworkManager] Mock server initialized");
+    }
+
+    /// <summary>
+    /// Routes mock server messages to WebSocketClient's message handler.
+    /// </summary>
+    /// <param name="type">The message type.</param>
+    /// <param name="data">The message data.</param>
+    private void OnMockServerMessage(string type, Godot.Collections.Dictionary data)
+    {
+        GD.Print($"[NetworkManager] Routing mock message: {type}");
+        WebSocketClient?.InjectMessage(type, data);
+    }
+
+    /// <summary>
+    /// Initializes the mock lobby with players.
+    /// </summary>
+    /// <param name="lobbyId">The lobby identifier.</param>
+    /// <param name="hostId">The host player ID.</param>
+    /// <param name="players">List of players in the lobby.</param>
+    public void InitializeMockLobby(
+        string lobbyId,
+        string hostId,
+        List<MessageProtocol.LobbyPlayerData> players
+    )
+    {
+        if (UseMockServer && _mockServer != null)
+        {
+            _mockServer.InitializeLobby(lobbyId, hostId, Main.PlayerId, players);
+        }
+    }
+
+    /// <summary>
+    /// Initializes the mock game with the local player.
+    /// </summary>
+    public void InitializeMockGame()
+    {
+        if (UseMockServer && _mockServer != null)
+        {
+            _mockServer.InitializeGame(Main.PlayerId);
+        }
     }
 
     /// <summary>
@@ -98,6 +166,13 @@ public partial class NetworkManager : Node
     /// </remarks>
     public bool SendPlayerAction(MessageProtocol.PlayerActionType action)
     {
+        if (UseMockServer && _mockServer != null)
+        {
+            var data = new Godot.Collections.Dictionary { ["action"] = action.ToString() };
+            _mockServer.ProcessMessage("PLAYER_ACTION", data);
+            return true;
+        }
+
         var message = MessageProtocol.CreatePlayerAction(action);
         return WebSocketClient.SendMessage(message.ToJson());
     }
@@ -113,6 +188,17 @@ public partial class NetworkManager : Node
     /// </remarks>
     public bool SendPlayCard(string cardId, string targetPlayerId = null)
     {
+        if (UseMockServer && _mockServer != null)
+        {
+            var data = new Godot.Collections.Dictionary { ["card_id"] = cardId };
+            if (!string.IsNullOrEmpty(targetPlayerId))
+            {
+                data["target_player_id"] = targetPlayerId;
+            }
+            _mockServer.ProcessMessage("PLAY_CARD", data);
+            return true;
+        }
+
         var message = MessageProtocol.CreatePlayCard(cardId, targetPlayerId);
         return WebSocketClient.SendMessage(message.ToJson());
     }
@@ -131,6 +217,17 @@ public partial class NetworkManager : Node
         string cardId = null
     )
     {
+        if (UseMockServer && _mockServer != null)
+        {
+            var data = new Godot.Collections.Dictionary { ["response"] = response.ToString() };
+            if (!string.IsNullOrEmpty(cardId))
+            {
+                data["card_id"] = cardId;
+            }
+            _mockServer.ProcessMessage("COMBAT_RESPONSE", data);
+            return true;
+        }
+
         var message = MessageProtocol.CreateCombatResponse(response, cardId);
         return WebSocketClient.SendMessage(message.ToJson());
     }

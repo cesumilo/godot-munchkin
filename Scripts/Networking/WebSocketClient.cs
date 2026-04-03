@@ -497,6 +497,18 @@ public partial class WebSocketClient : Node
     }
 
     /// <summary>
+    /// Injects a mock message into the message handler.
+    /// Used by MockServer to simulate server responses.
+    /// </summary>
+    /// <param name="messageType">The message type.</param>
+    /// <param name="data">The message data.</param>
+    public void InjectMessage(string messageType, Godot.Collections.Dictionary data)
+    {
+        GameLogger.Debug($"[WebSocketClient] Injecting mock message: {messageType}", this);
+        MessageReceived?.Invoke(messageType, data);
+    }
+
+    /// <summary>
     /// Cleans up resources when exiting scene tree.
     /// </summary>
     public override void _ExitTree()

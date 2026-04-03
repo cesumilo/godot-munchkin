@@ -40,6 +40,33 @@ public static class MessageProtocol
     /// </summary>
     public const string USE_ABILITY = "USE_ABILITY";
 
+    // ============== LOBBY MESSAGE TYPES (CLIENT) ==============
+
+    /// <summary>
+    /// Client message type for setting ready status in lobby.
+    /// </summary>
+    public const string SET_READY = "SET_READY";
+
+    /// <summary>
+    /// Client message type for changing lobby settings.
+    /// </summary>
+    public const string CHANGE_SETTINGS = "CHANGE_SETTINGS";
+
+    /// <summary>
+    /// Client message type for kicking a player from lobby.
+    /// </summary>
+    public const string KICK_PLAYER = "KICK_PLAYER";
+
+    /// <summary>
+    /// Client message type for starting the game (host only).
+    /// </summary>
+    public const string START_GAME = "START_GAME";
+
+    /// <summary>
+    /// Client message type for lobby chat messages.
+    /// </summary>
+    public const string LOBBY_CHAT = "LOBBY_CHAT";
+
     // ============== SERVER MESSAGE TYPES ==============
 
     /// <summary>
@@ -76,6 +103,48 @@ public static class MessageProtocol
     /// Server message type for error notifications.
     /// </summary>
     public const string ERROR = "ERROR";
+
+    // ============== LOBBY MESSAGE TYPES (SERVER) ==============
+
+    /// <summary>
+    /// Server message type for full lobby state.
+    /// </summary>
+    public const string LOBBY_STATE = "LOBBY_STATE";
+
+    /// <summary>
+    /// Server message type when a player joins the lobby.
+    /// </summary>
+    public const string PLAYER_JOINED = "PLAYER_JOINED";
+
+    /// <summary>
+    /// Server message type when a player leaves the lobby.
+    /// </summary>
+    public const string PLAYER_LEFT = "PLAYER_LEFT";
+
+    /// <summary>
+    /// Server message type when a player changes ready status.
+    /// </summary>
+    public const string PLAYER_READY_CHANGE = "PLAYER_READY_CHANGE";
+
+    /// <summary>
+    /// Server message type when lobby settings change.
+    /// </summary>
+    public const string LOBBY_SETTINGS_CHANGE = "LOBBY_SETTINGS_CHANGE";
+
+    /// <summary>
+    /// Server message type when game is starting countdown.
+    /// </summary>
+    public const string GAME_STARTING = "GAME_STARTING";
+
+    /// <summary>
+    /// Server message type when game has started.
+    /// </summary>
+    public const string GAME_STARTED = "GAME_STARTED";
+
+    /// <summary>
+    /// Server message type for lobby chat messages.
+    /// </summary>
+    public const string LOBBY_CHAT_MESSAGE = "LOBBY_CHAT_MESSAGE";
 
     // ============== ENUMERATIONS ==============
 
@@ -812,6 +881,141 @@ public static class MessageProtocol
         public string SuggestedAction { get; set; }
     }
 
+    /// <summary>
+    /// Contains lobby player information.
+    /// </summary>
+    public class LobbyPlayerData
+    {
+        /// <summary>
+        /// Gets or sets the player unique identifier.
+        /// </summary>
+        public string Id { get; set; }
+
+        /// <summary>
+        /// Gets or sets the player display name.
+        /// </summary>
+        public string Name { get; set; }
+
+        /// <summary>
+        /// Gets or sets whether this player is the lobby host.
+        /// </summary>
+        public bool IsHost { get; set; }
+
+        /// <summary>
+        /// Gets or sets whether this player is ready.
+        /// </summary>
+        public bool IsReady { get; set; }
+
+        /// <summary>
+        /// Gets or sets the player's avatar identifier.
+        /// </summary>
+        public string Avatar { get; set; }
+    }
+
+    /// <summary>
+    /// Contains lobby settings.
+    /// </summary>
+    public class LobbySettingsData
+    {
+        /// <summary>
+        /// Gets or sets whether turn timer is enabled.
+        /// </summary>
+        public bool TimerEnabled { get; set; }
+
+        /// <summary>
+        /// Gets or sets the turn time limit in seconds.
+        /// </summary>
+        public int TurnTimeLimit { get; set; }
+
+        /// <summary>
+        /// Gets or sets the combat interaction time in seconds.
+        /// </summary>
+        public int CombatInteractionTime { get; set; }
+    }
+
+    /// <summary>
+    /// Contains full lobby state information.
+    /// </summary>
+    public class LobbyStateData
+    {
+        /// <summary>
+        /// Gets or sets the lobby unique identifier.
+        /// </summary>
+        public string LobbyId { get; set; }
+
+        /// <summary>
+        /// Gets or sets the host player identifier.
+        /// </summary>
+        public string HostId { get; set; }
+
+        /// <summary>
+        /// Gets or sets the list of players in the lobby.
+        /// </summary>
+        public List<LobbyPlayerData> Players { get; set; }
+
+        /// <summary>
+        /// Gets or sets whether a game is currently in progress.
+        /// </summary>
+        public bool GameInProgress { get; set; }
+
+        /// <summary>
+        /// Gets or sets the maximum number of players allowed.
+        /// </summary>
+        public int MaxPlayers { get; set; }
+
+        /// <summary>
+        /// Gets or sets the current number of players.
+        /// </summary>
+        public int CurrentPlayers { get; set; }
+
+        /// <summary>
+        /// Gets or sets the lobby settings.
+        /// </summary>
+        public LobbySettingsData Settings { get; set; }
+    }
+
+    // ============== LOBBY MESSAGE BUILDERS ==============
+
+    /// <summary>
+    /// Creates a SET_READY message.
+    /// </summary>
+    /// <param name="isReady">The ready status to set.</param>
+    /// <returns>A new WebSocketMessage ready for transmission.</returns>
+    public static WebSocketMessage CreateSetReadyMessage(bool isReady)
+    {
+        var data = new Godot.Collections.Dictionary { ["is_ready"] = isReady };
+
+        return new WebSocketMessage(SET_READY, data);
+    }
+
+    /// <summary>
+    /// Creates a START_GAME message.
+    /// </summary>
+    /// <param name="forceStart">Whether to force start even if not all players are ready.</param>
+    /// <returns>A new WebSocketMessage ready for transmission.</returns>
+    public static WebSocketMessage CreateStartGameMessage(bool forceStart = false)
+    {
+        var data = new Godot.Collections.Dictionary { ["force_start"] = forceStart };
+
+        return new WebSocketMessage(START_GAME, data);
+    }
+
+    /// <summary>
+    /// Creates a LOBBY_CHAT message.
+    /// </summary>
+    /// <param name="message">The chat message text.</param>
+    /// <returns>A new WebSocketMessage ready for transmission.</returns>
+    public static WebSocketMessage CreateLobbyChatMessage(string message)
+    {
+        var data = new Godot.Collections.Dictionary
+        {
+            ["message"] = message,
+            ["timestamp"] = DateTime.UtcNow.ToString("o"),
+        };
+
+        return new WebSocketMessage(LOBBY_CHAT, data);
+    }
+
     // ============== UTILITY METHODS ==============
 
     /// <summary>
@@ -828,6 +1032,11 @@ public static class MessageProtocol
             COMBAT_RESPONSE => "Response to combat interaction",
             NEGOTIATION => "Negotiation offer/response",
             USE_ABILITY => "Use class ability",
+            SET_READY => "Set ready status in lobby",
+            CHANGE_SETTINGS => "Change lobby settings",
+            KICK_PLAYER => "Kick player from lobby",
+            START_GAME => "Start the game",
+            LOBBY_CHAT => "Send lobby chat message",
             GAME_STATE => "Full game state update",
             TURN_PHASE_CHANGE => "Turn phase changed",
             COMBAT_START => "Combat started",
@@ -835,6 +1044,14 @@ public static class MessageProtocol
             CARD_PLAY_RESULT => "Card play result",
             PLAYER_UPDATE => "Player state update",
             ERROR => "Error message",
+            LOBBY_STATE => "Lobby state update",
+            PLAYER_JOINED => "Player joined lobby",
+            PLAYER_LEFT => "Player left lobby",
+            PLAYER_READY_CHANGE => "Player ready status changed",
+            LOBBY_SETTINGS_CHANGE => "Lobby settings changed",
+            GAME_STARTING => "Game starting countdown",
+            GAME_STARTED => "Game has started",
+            LOBBY_CHAT_MESSAGE => "Lobby chat message received",
             _ => "Unknown message type",
         };
     }
@@ -850,7 +1067,12 @@ public static class MessageProtocol
             || messageType == PLAY_CARD
             || messageType == COMBAT_RESPONSE
             || messageType == NEGOTIATION
-            || messageType == USE_ABILITY;
+            || messageType == USE_ABILITY
+            || messageType == SET_READY
+            || messageType == CHANGE_SETTINGS
+            || messageType == KICK_PLAYER
+            || messageType == START_GAME
+            || messageType == LOBBY_CHAT;
     }
 
     /// <summary>
@@ -866,7 +1088,15 @@ public static class MessageProtocol
             || messageType == COMBAT_RESOLUTION
             || messageType == CARD_PLAY_RESULT
             || messageType == PLAYER_UPDATE
-            || messageType == ERROR;
+            || messageType == ERROR
+            || messageType == LOBBY_STATE
+            || messageType == PLAYER_JOINED
+            || messageType == PLAYER_LEFT
+            || messageType == PLAYER_READY_CHANGE
+            || messageType == LOBBY_SETTINGS_CHANGE
+            || messageType == GAME_STARTING
+            || messageType == GAME_STARTED
+            || messageType == LOBBY_CHAT_MESSAGE;
     }
 
     // ============== CARD REFERENCE NOTES ==============
