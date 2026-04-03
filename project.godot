@@ -17,9 +17,7 @@ config/icon="res://icon.svg"
 
 [autoload]
 
-NetworkManager="*res://Scripts/Networking/NetworkManager.cs"
-CardFactory="*res://Scripts/Cards/CardFactory.cs"
-GameStateManager="*res://Scripts/GameState/GameStateManager.cs"
+Autoload="*uid://7aurx5c1blov"
 
 [display]
 

@@ -1,0 +1,17 @@
+[gd_scene format=3 uid="uid://7aurx5c1blov"]
+
+[ext_resource type="Script" uid="uid://bc4adqv1yfva" path="res://Scripts/Networking/NetworkManager.cs" id="1_bmkpu"]
+[ext_resource type="Script" uid="uid://plw3ccki874q" path="res://Scripts/Cards/CardFactory.cs" id="2_wuwi5"]
+[ext_resource type="Script" uid="uid://ms1lhfko4oki" path="res://Scripts/GameState/GameStateManager.cs" id="3_8mb5k"]
+
+[node name="Autoload" type="Node" unique_id=1766173493]
+
+[node name="NetworkManager" type="Node" parent="." unique_id=1948305067]
+script = ExtResource("1_bmkpu")
+UseMockServer = true
+
+[node name="CardFactory" type="Node" parent="." unique_id=1033657231]
+script = ExtResource("2_wuwi5")
+
+[node name="GameStateManager" type="Node" parent="." unique_id=978148290]
+script = ExtResource("3_8mb5k")
