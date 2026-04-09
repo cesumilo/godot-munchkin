@@ -3,6 +3,8 @@
 [ext_resource type="Script" uid="uid://bc4adqv1yfva" path="res://Scripts/Networking/NetworkManager.cs" id="1_bmkpu"]
 [ext_resource type="Script" uid="uid://plw3ccki874q" path="res://Scripts/Cards/CardFactory.cs" id="2_wuwi5"]
 [ext_resource type="Script" uid="uid://ms1lhfko4oki" path="res://Scripts/GameState/GameStateManager.cs" id="3_8mb5k"]
+[ext_resource type="Script" uid="uid://eo5ars0eo6by" path="res://Scripts/Input/InputManager.cs" id="5_inputmanager"]
+[ext_resource type="Script" uid="uid://dwxameatua1p8" path="res://Scripts/Input/InputRemappingManager.cs" id="6_inputremapping"]
 
 [node name="Autoload" type="Node" unique_id=1766173493]
 
@@ -15,3 +17,9 @@ script = ExtResource("2_wuwi5")
 
 [node name="GameStateManager" type="Node" parent="." unique_id=978148290]
 script = ExtResource("3_8mb5k")
+
+[node name="InputManager" type="Node" parent="." unique_id=2001]
+script = ExtResource("5_inputmanager")
+
+[node name="InputRemappingManager" type="Node" parent="." unique_id=2002]
+script = ExtResource("6_inputremapping")

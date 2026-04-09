@@ -1,0 +1,32 @@
+[gd_scene format=3 uid="uid://c8yvxg3ulq3a5"]
+
+[ext_resource type="Script" path="res://Tests/Smoke/VisualFeedbackTest.cs" id="1_abc123"]
+
+[node name="VisualFeedbackTest" type="Node3D"]
+script = ExtResource("1_abc123")
+
+[node name="Camera3D" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.866025, 0.5, 0, -0.5, 0.866025, 0, 5, 8)
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.707107, -0.5, 0.5, 0, 0.707107, 0.707107, -0.707107, -0.5, 0.5, 5, 10, 5)
+shadow_enabled = true
+
+[node name="TestUI" type="CanvasLayer" parent="."]
+
+[node name="Instructions" type="Label" parent="TestUI"]
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -250.0
+offset_top = 20.0
+offset_right = 250.0
+offset_bottom = 100.0
+grow_horizontal = 2
+text = "Visual Feedback Test
+Arrow Keys / D-Pad: Navigate
+Enter / Click: Select
+Escape / Right-Click: Cancel
+"
+horizontal_alignment = 1
+vertical_alignment = 1

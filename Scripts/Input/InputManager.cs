@@ -90,6 +90,15 @@ public partial class InputManager : Node
     /// </summary>
     private void InitializeDefaultHandlers()
     {
+        // Wait for InputRemappingManager to be ready
+        if (InputRemappingManager.Instance == null)
+        {
+            GD.Print("[InputManager] Waiting for InputRemappingManager...");
+            // Try again next frame
+            CallDeferred(nameof(InitializeDefaultHandlers));
+            return;
+        }
+
         // Mouse and keyboard handler
         var mouseKeyboard = new MouseKeyboardHandler();
         RegisterHandler(mouseKeyboard);

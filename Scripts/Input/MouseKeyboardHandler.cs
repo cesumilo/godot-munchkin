@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Godot;
 
 /// <summary>
@@ -25,12 +26,8 @@ public partial class MouseKeyboardHandler : Node, IInputHandler
     /// </summary>
     public bool IsEnabled { get; private set; } = true;
 
-    // Track previous states for edge detection
-    private bool _wasSelectPressed = false;
-    private bool _wasCancelPressed = false;
-    private bool _wasActionMenuPressed = false;
-    private bool _wasEndTurnPressed = false;
-    private bool _wasPausePressed = false;
+    // Track pressed state per action (combines mouse + keyboard)
+    private HashSet<InputActionType> _pressedActions = new();
 
     // Navigation repeat timing
     private double _navigateRepeatTimer = 0.0;
@@ -54,88 +51,103 @@ public partial class MouseKeyboardHandler : Node, IInputHandler
         if (!IsEnabled)
             return;
 
-        ProcessMouseInput();
-        ProcessKeyboardInput(delta);
+        // Build current state from both mouse and keyboard
+        var currentState = new HashSet<InputActionType>();
+
+        CollectMouseInput(currentState);
+        CollectKeyboardInput(currentState, delta);
+
+        // Process state changes
+        ProcessStateChanges(currentState);
+
+        // Update stored state
+        _pressedActions = currentState;
     }
 
     /// <summary>
-    /// Processes mouse button input using remappable bindings.
+    /// Collects mouse input into the current state set.
     /// </summary>
-    private void ProcessMouseInput()
+    private void CollectMouseInput(HashSet<InputActionType> currentState)
     {
         var remapping = InputRemappingManager.Instance;
         if (remapping == null)
             return;
 
-        // Check each action's mouse binding
         foreach (var kvp in remapping.Bindings)
         {
             if (!kvp.Value.MouseButton.HasValue)
                 continue;
 
             var button = kvp.Value.MouseButton.Value;
-            bool isPressed = Input.IsMouseButtonPressed(button);
-            var actionType = ParseActionType(kvp.Key);
-
-            if (actionType.HasValue)
+            if (Input.IsMouseButtonPressed(button))
             {
-                ProcessActionButton(actionType.Value, isPressed);
+                var actionType = ParseActionType(kvp.Key);
+                if (actionType.HasValue)
+                {
+                    currentState.Add(actionType.Value);
+                }
             }
         }
     }
 
     /// <summary>
-    /// Processes keyboard input using remappable bindings.
+    /// Collects keyboard input into the current state set.
     /// </summary>
-    private void ProcessKeyboardInput(double delta)
+    private void CollectKeyboardInput(HashSet<InputActionType> currentState, double delta)
     {
         var remapping = InputRemappingManager.Instance;
         if (remapping == null)
             return;
 
-        // Check each action's keyboard binding
+        // Check action keys
         foreach (var kvp in remapping.Bindings)
         {
             if (!kvp.Value.KeyboardKey.HasValue)
                 continue;
 
             var key = kvp.Value.KeyboardKey.Value;
-            bool isPressed = Input.IsKeyPressed(key);
-            var actionType = ParseActionType(kvp.Key);
-
-            if (actionType.HasValue && !IsNavigationAction(actionType.Value))
+            if (Input.IsKeyPressed(key))
             {
-                ProcessActionButton(actionType.Value, isPressed);
+                var actionType = ParseActionType(kvp.Key);
+                if (actionType.HasValue && !IsNavigationAction(actionType.Value))
+                {
+                    currentState.Add(actionType.Value);
+                }
             }
         }
 
-        // Process navigation separately for repeat handling
-        ProcessNavigation(delta);
+        // Process navigation with repeat
+        ProcessNavigation(currentState, delta);
     }
 
     /// <summary>
-    /// Processes a single action button state.
+    /// Processes state changes and fires events.
     /// </summary>
-    private void ProcessActionButton(InputActionType action, bool isPressed)
+    private void ProcessStateChanges(HashSet<InputActionType> currentState)
     {
-        bool wasPressed = GetWasPressed(action);
-
-        if (isPressed && !wasPressed)
+        // Actions that are newly pressed
+        foreach (var action in currentState)
         {
-            FireEvent(GameInputEvent.Press(action, DeviceName));
-            SetWasPressed(action, true);
+            if (!_pressedActions.Contains(action))
+            {
+                FireEvent(GameInputEvent.Press(action, DeviceName));
+            }
         }
-        else if (!isPressed && wasPressed)
+
+        // Actions that are newly released
+        foreach (var action in _pressedActions)
         {
-            FireEvent(GameInputEvent.Release(action, DeviceName));
-            SetWasPressed(action, false);
+            if (!currentState.Contains(action))
+            {
+                FireEvent(GameInputEvent.Release(action, DeviceName));
+            }
         }
     }
 
     /// <summary>
     /// Processes navigation input with repeat handling.
     /// </summary>
-    private void ProcessNavigation(double delta)
+    private void ProcessNavigation(HashSet<InputActionType> currentState, double delta)
     {
         var remapping = InputRemappingManager.Instance;
         if (remapping == null)
@@ -169,13 +181,13 @@ public partial class MouseKeyboardHandler : Node, IInputHandler
             if (!_isNavigating || _navigateRepeatTimer >= NavigateRepeatRate)
             {
                 if (up)
-                    FireEvent(GameInputEvent.Press(InputActionType.NavigateUp, DeviceName));
+                    currentState.Add(InputActionType.NavigateUp);
                 if (down)
-                    FireEvent(GameInputEvent.Press(InputActionType.NavigateDown, DeviceName));
+                    currentState.Add(InputActionType.NavigateDown);
                 if (left)
-                    FireEvent(GameInputEvent.Press(InputActionType.NavigateLeft, DeviceName));
+                    currentState.Add(InputActionType.NavigateLeft);
                 if (right)
-                    FireEvent(GameInputEvent.Press(InputActionType.NavigateRight, DeviceName));
+                    currentState.Add(InputActionType.NavigateRight);
 
                 _navigateRepeatTimer = 0;
             }
@@ -198,47 +210,6 @@ public partial class MouseKeyboardHandler : Node, IInputHandler
             || action == InputActionType.NavigateDown
             || action == InputActionType.NavigateLeft
             || action == InputActionType.NavigateRight;
-    }
-
-    /// <summary>
-    /// Gets the previous pressed state for an action.
-    /// </summary>
-    private bool GetWasPressed(InputActionType action)
-    {
-        return action switch
-        {
-            InputActionType.Select => _wasSelectPressed,
-            InputActionType.Cancel => _wasCancelPressed,
-            InputActionType.ActionMenu => _wasActionMenuPressed,
-            InputActionType.EndTurn => _wasEndTurnPressed,
-            InputActionType.Pause => _wasPausePressed,
-            _ => false,
-        };
-    }
-
-    /// <summary>
-    /// Sets the previous pressed state for an action.
-    /// </summary>
-    private void SetWasPressed(InputActionType action, bool value)
-    {
-        switch (action)
-        {
-            case InputActionType.Select:
-                _wasSelectPressed = value;
-                break;
-            case InputActionType.Cancel:
-                _wasCancelPressed = value;
-                break;
-            case InputActionType.ActionMenu:
-                _wasActionMenuPressed = value;
-                break;
-            case InputActionType.EndTurn:
-                _wasEndTurnPressed = value;
-                break;
-            case InputActionType.Pause:
-                _wasPausePressed = value;
-                break;
-        }
     }
 
     /// <summary>
