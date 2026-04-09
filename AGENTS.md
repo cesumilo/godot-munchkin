@@ -98,6 +98,32 @@ All C# code must be formatted with **CSharpier** before being considered done. T
 
 ---
 
+## File Writing Strategy
+
+When creating or writing files, **never write an entire file in a single operation**. Instead, always follow a chunked writing approach:
+
+1. **Break files into small chunks** of no more than 50 lines per write operation.
+2. **Write sequentially**: Start from the beginning of the file and append each subsequent chunk.
+3. **For new files**: Create the file with the first chunk, then append remaining chunks one at a time.
+4. **For modifications**: When rewriting a file, follow the same chunked approach — write the first portion, then append the rest in small successive operations.
+5. **Never skip this rule**, even if the file seems short enough to write in one pass. Always split into at least 2 chunks if the file is longer than 50 lines.
+6. **After each chunk**, briefly state what was written and what remains (e.g., "Wrote lines 1–50: imports and class definition. Next: methods implementation, lines 51–100.").
+
+### Why
+
+The file writing tool has a buffer/context limit and large single writes may be silently truncated or fail. Chunked writing ensures reliability and completeness.
+
+### Example workflow
+
+\`\`\`
+Step 1: Write lines 1-50 (file header, imports, initial code)
+Step 2: Append lines 51-100 (core logic)
+Step 3: Append lines 101-130 (remaining code, exports)
+Step 4: Verify final file is complete
+\`\`\`
+
+---
+
 ## Your Core Expertise
 
 - Godot 4.6 C# API, node system, scene architecture, signals, and .NET integration
